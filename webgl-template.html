@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebGL Template</title>
+    <link rel="stylesheet" type="text/css" href="webgl-template.css">
+    <script src="webgl-template.js"></script>
+</head>
+
+<body>
+    <h1>WebGL Template</h1>
+    <hr/>
+
+    <pre id="vertShader" type="x-shader/x-fragment">
+        uniform mat4 WorldMatrix;
+        uniform mat4 CameraMatrix;
+        uniform mat4 ProjectionMatrix;
+
+        attribute vec4 aPosition;
+        attribute vec3 aNormal;
+        attribute vec4 aColor;
+        attribute vec4 aTexCoord;
+
+        varying vec4 VS_Position;
+        varying vec4 VS_Normal;
+        varying vec4 VS_Color;
+        varying vec4 VS_TexCoord;
+
+        void main(void)
+        {
+            VS_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+            VS_Normal = aNormal;
+            VS_Color = aColor;
+            VS_TexCoord = aTexCoord;
+            gl_Position = VS_Position;
+        }
+    </pre>
+
+    <pre id="fragShader" type="x-shader/x-fragment">
+        precision mediump float;
+
+        uniform float timer;
+        uniform vec2  mouse;
+
+        varying vec4 VS_Position;
+        varying vec3 VS_Normal;
+        varying vec4 VS_Color;
+        varying vec4 VS_TexCoord;
+
+        void main(void)
+        {
+            gl_FragColor= VS_Color;
+        }
+    </pre>
+
+    <script>
+        var vertShader =
+            `
+uniform mat4 WorldMatrix;
+uniform mat4 CameraMatrix;
+uniform mat4 ProjectionMatrix;
+
+attribute vec4 aPosition;
+attribute vec3 aNormal;
+attribute vec4 aColor;
+attribute vec4 aTexCoord;
+
+varying vec4 VS_Position;
+varying vec4 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+
+void main(void)
+{
+    VS_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+    VS_Normal = aNormal;
+    VS_Color = aColor;
+    VS_TexCoord = aTexCoord;
+    gl_Position = VS_Position;
+}
+        `
+
+        var fragShader =
+            `
+        precision mediump float;
+
+        uniform float timer;
+        uniform vec2  mouse;
+
+        varying vec4 VS_Position;
+        varying vec3 VS_Normal;
+        varying vec4 VS_Color;
+        varying vec4 VS_TexCoord;
+
+        void main(void)
+        {
+            gl_FragColor= VS_Color;
+        }
+                `
+    </script>
+
+    <script>
+        "use strict";
+        class WGLApp {
+            constructor() {
+                this.context = null;
+                this.gl = null;
+                this.mainloopRunning = false;
+                this.t0 = 0;
+                this.t1 = 0;
+                this.elapsedTime = 0;
+                this.timer = 0;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.fluxions = null;
+                this.webglTest = null;
+            }
+
+            init() {
+                this.context = WebGLTemplate.Context.CreateContext();
+                if (this.context) {
+                    this.gl = this.context.gl;
+                    this.OnInit();
+                }
+            }
+
+            mainloop(timestamp) {
+                this.t0 = this.t1;
+                this.t1 = timestamp / 1000.0;
+                this.elapsedTime = this.t1 - this.t0;
+                this.timer += this.elapsedTime;
+                this.OnUpdate(this.elapsedTime);
+                this.OnRender();
+                if (this.mainloopRunning) {
+                    requestAnimationFrame((timestamp) => {
+                        this.mainloop(timestamp)
+                    });
+                }
+            }
+
+            start() {
+                let self = this;
+                this.mainloopRunning = true;
+                window.onkeyup = (e) => {
+                    self.OnKeyUp(e.key, e.keyMod);
+                };
+                window.onkeydown = (e) => {
+                    self.OnKeyDown(e.key, e.keyMod);
+                };
+                this.context.canvasElement.onmousemove = (e) => {
+                    self.mouseX = e.clientX - self.context.canvasElement.getBoundingClientRect().left;
+                    self.mouseY = e.clientY - self.context.canvasElement.getBoundingClientRect().top;
+                };
+                this.context.canvasElement.onmousebuttondown = (e) => {
+                    if (e.buttons & 1) self.mouseButton1 = true;
+                    if (e.buttons & 2) self.mouseButton2 = true;
+                };
+                this.context.canvasElement.onmousebuttonup = (e) => {
+                    if (e.buttons & 1) self.mouseButton1 = false;
+                    if (e.buttons & 2) self.mouseButton2 = false;
+                }
+
+                this.mainloop(0);
+            }
+
+            OnKeyDown(keyName, keyMod) {
+                if (keyName == "r")
+                    this.timer = 0;
+            }
+
+            OnKeyUp(keyName, keyMod) {
+
+            }
+
+            OnInit() {
+                this.fluxions = new Fluxions(this.context.gl);
+                let renderConfig = this.fluxions.CreateRenderConfig(vertShader, fragShader);
+
+            }
+
+            OnUpdate(elapsedTime) {
+
+            }
+
+            OnRender() {
+                let context = this.context;
+                let gl = this.context.gl;
+                let timer = this.timer;
+                context.ClearScreen(0.8 + 0.2 * Math.sin(Math.PI * timer), 0.4, 0.8);
+
+                // let webglTest = new WebGLTest(gl);
+                // webglTest.test(gl);
+
+                let webglTest2 = new WebGLTest2(gl);
+                webglTest2.test(gl);
+            }
+        }
+
+        var app = new WGLApp();
+        app.init();
+        app.start();
+    </script>
+</body>
+
+</html>
