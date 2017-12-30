@@ -60,7 +60,7 @@ class IndexedGeometryMesh {
     private _currentMaterialName: string = "unknown";
 
     private _attribInfo: AttribInfo[] = [
-        new AttribInfo(0, "aVertex", true, new Vector4(0, 0, 0, 1)),
+        new AttribInfo(0, "aPosition", true, new Vector4(0, 0, 0, 1)),
         new AttribInfo(1, "aNormal", true, new Vector4(0, 0, 0, 0)),
         new AttribInfo(2, "aColor", true, new Vector4(1, 1, 1, 1)),
         new AttribInfo(3, "aTexCoord", true, new Vector4(0, 0, 0, 0)),
@@ -140,7 +140,7 @@ class IndexedGeometryMesh {
         }
 
         for (let i = 0; i < 8; i++) {
-            if (this._attribInfo[i].enabled) {
+            if (this._attribInfo[i].enabled && this._attribInfo[i].location >= 0) {
                 gl.disableVertexAttribArray(this._attribInfo[i].location);
             }
         }
@@ -189,21 +189,42 @@ class IndexedGeometryMesh {
         this._dirty = true;
     }
 
+    VertexAttrib1(index: number, x: number = 0): void {
+        if (index < 0 || index >= 8) return;
+        this._attribInfo[index].attrib4(x, 0, 0, 0);
+        if (index == 0) this.emitVertex();
+    }
+
+    VertexAttrib2(index: number, x: number = 0, y: number = 0): void {
+        if (index < 0 || index >= 8) return;
+        this._attribInfo[index].attrib4(x, y, 0, 0);
+        if (index == 0) this.emitVertex();
+    }
+
+    VertexAttrib3(index: number, x: number = 0, y: number = 0, z: number = 0): void {
+        if (index < 0 || index >= 8) return;
+        this._attribInfo[index].attrib4(x, y, z, 0);
+        if (index == 0) this.emitVertex();
+    }
+
     VertexAttrib4(index: number, x: number = 0, y: number = 0, z: number = 0, w: number = 1): void {
         if (index < 0 || index >= 8) return;
         this._attribInfo[index].attrib4(x, y, z, w);
         if (index == 0) this.emitVertex();
     }
+
     VertexAttrib2v(index: number, v: Vector2): void {
         if (index < 0 || index >= 8) return;
         this._attribInfo[index].attrib2v(v);
         if (index == 0) this.emitVertex();
     }
+
     VertexAttrib3v(index: number, v: Vector3): void {
         if (index < 0 || index >= 8) return;
         this._attribInfo[index].attrib3v(v);
         if (index == 0) this.emitVertex();
     }
+
     VertexAttrib4v(index: number, v: Vector4): void {
         if (index < 0 || index >= 8) return;
         this._attribInfo[index].attrib4v(v);

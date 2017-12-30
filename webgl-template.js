@@ -768,7 +768,7 @@ class IndexedGeometryMesh {
         this._vertexCount = 0;
         this._currentMaterialName = "unknown";
         this._attribInfo = [
-            new AttribInfo(0, "aVertex", true, new Vector4(0, 0, 0, 1)),
+            new AttribInfo(0, "aPosition", true, new Vector4(0, 0, 0, 1)),
             new AttribInfo(1, "aNormal", true, new Vector4(0, 0, 0, 0)),
             new AttribInfo(2, "aColor", true, new Vector4(1, 1, 1, 1)),
             new AttribInfo(3, "aTexCoord", true, new Vector4(0, 0, 0, 0)),
@@ -846,7 +846,7 @@ class IndexedGeometryMesh {
             }
         }
         for (let i = 0; i < 8; i++) {
-            if (this._attribInfo[i].enabled) {
+            if (this._attribInfo[i].enabled && this._attribInfo[i].location >= 0) {
                 gl.disableVertexAttribArray(this._attribInfo[i].location);
             }
         }
@@ -887,6 +887,27 @@ class IndexedGeometryMesh {
         this._indexCount++;
         this._surfaces[this._surfaces.length - 1].add();
         this._dirty = true;
+    }
+    VertexAttrib1(index, x = 0) {
+        if (index < 0 || index >= 8)
+            return;
+        this._attribInfo[index].attrib4(x, 0, 0, 0);
+        if (index == 0)
+            this.emitVertex();
+    }
+    VertexAttrib2(index, x = 0, y = 0) {
+        if (index < 0 || index >= 8)
+            return;
+        this._attribInfo[index].attrib4(x, y, 0, 0);
+        if (index == 0)
+            this.emitVertex();
+    }
+    VertexAttrib3(index, x = 0, y = 0, z = 0) {
+        if (index < 0 || index >= 8)
+            return;
+        this._attribInfo[index].attrib4(x, y, z, 0);
+        if (index == 0)
+            this.emitVertex();
     }
     VertexAttrib4(index, x = 0, y = 0, z = 0, w = 1) {
         if (index < 0 || index >= 8)
@@ -1598,10 +1619,12 @@ varying vec4 VS_Position;
 varying vec3 VS_Normal;
 varying vec4 VS_Color;
 varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
 
 void main(void)
 {
-    VS_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+    VS_Position = WorldMatrix * aPosition;
+    VS_CameraDir = CameraMatrix[3].xyz - VS_Position.xyz;
     VS_Normal = aNormal;
     VS_Color = aColor;
     VS_TexCoord = aTexCoord;
@@ -1613,15 +1636,24 @@ precision mediump float;
 
 uniform float timer;
 uniform vec2  mouse;
+uniform vec3  LightDir;
+
+uniform sampler2D Texture2D;
+uniform samplerCube TextureCubeMap;
 
 varying vec4 VS_Position;
 varying vec3 VS_Normal;
 varying vec4 VS_Color;
 varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
 
 void main(void)
 {
-    gl_FragColor = VS_Color;
+    vec3 V = normalize(VS_CameraDir);
+    vec3 L = normalize (LightDir);
+    vec3 N = normalize (VS_Normal);
+    float NdotL = max(0.0, dot(N, L));
+    gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
 }
         `;
     }
@@ -1701,8 +1733,13 @@ void main(void)
             console.error(gl.getProgramInfoLog(this.program));
             return false;
         }
-        for (let uniform of this.uniforms) {
-            this.uniforms.set(uniform[0], gl.getUniformLocation(this.program, uniform[0]));
+        let numUniforms = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS);
+        this.uniforms.clear();
+        for (let i = 0; i < numUniforms; i++) {
+            let uniform = gl.getActiveUniform(this.program, i);
+            if (!uniform)
+                continue;
+            this.uniforms.set(uniform.name, gl.getUniformLocation(this.program, uniform.name));
         }
         return true;
     }
@@ -1710,8 +1747,15 @@ void main(void)
         if (!this.fluxions)
             return false;
         this.geometryMesh = new IndexedGeometryMesh(this.fluxions);
+        this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
         this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
         this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
         this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
         this.geometryMesh.BeginSurface(gl.TRIANGLES);
         this.geometryMesh.AddIndex(0);
@@ -1740,7 +1784,12 @@ void main(void)
             new ImageData(new Uint8ClampedArray([0, 0, 255, 255]), 1, 1),
             new ImageData(new Uint8ClampedArray([255, 255, 0, 255]), 1, 1)
         ];
-        const texture2DSPI = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
+        const texture2DSPI = new ImageData(new Uint8ClampedArray([
+            255, 0, 255, 255,
+            255, 255, 0, 255,
+            0, 255, 255, 255,
+            127, 127, 127, 255
+        ]), 2, 2);
         this.texture2D = gl.createTexture();
         this.textureCM = gl.createTexture();
         if (!this.texture2D || !this.textureCM)
@@ -1762,17 +1811,32 @@ void main(void)
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
         let vloc = gl.getAttribLocation(this.program, "aPosition");
-        gl.vertexAttribPointer(vloc, 4, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(0);
+        if (vloc >= 0) {
+            gl.vertexAttribPointer(vloc, 4, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(vloc);
+        }
         gl.useProgram(this.program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
         let loc;
         if (loc = this.uniforms.get("CameraMatrix")) {
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
+        }
+        if (loc = this.uniforms.get("LightDir")) {
+            gl.uniform3fv(loc, new Vector3(0.25, 0.25, 1.0).toFloat32Array());
         }
         if (loc = this.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
             this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
+        }
+        if (loc = this.uniforms.get("Texture2D")) {
+            gl.uniform1i(loc, 0);
+        }
+        if (loc = this.uniforms.get("TextureCubeMap")) {
+            gl.uniform1i(loc, 1);
         }
         let wmloc = this.uniforms.get("WorldMatrix");
         if (wmloc) {
@@ -1785,10 +1849,17 @@ void main(void)
             gl.uniformMatrix4fv(wmloc, false, matrix);
         }
         //gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_SHORT, 0);
-        if (this.geometryMesh) {
+        if (this.geometryMesh && this.renderConfig) {
             this.geometryMesh.Render(this.renderConfig);
         }
-        gl.disableVertexAttribArray(0);
+        if (vloc >= 0) {
+            gl.disableVertexAttribArray(vloc);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE0);
         gl.useProgram(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
