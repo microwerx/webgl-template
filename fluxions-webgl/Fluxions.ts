@@ -8,7 +8,7 @@
 /// <reference path="IndexedGeometryMesh.ts" />
 /// <reference path="Texture.ts" />
 /// <reference path="MaterialLibrary.ts" />
-/// <reference path="WebGLTest.ts" />
+/// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
 
 class Fluxions {
@@ -24,6 +24,6 @@ class Fluxions {
         return new IndexedGeometryMesh(this);
     }
 
-    testWebGL: WebGLTest = new WebGLTest();
+    testWebGL1: WebGLTest1 = new WebGLTest1();
     testWebGL2: WebGLTest2 = new WebGLTest2();
 }

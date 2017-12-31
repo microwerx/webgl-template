@@ -1,6 +1,6 @@
 /// <reference path="Fluxions.ts" />
 
-class WebGLTest {
+class WebGLTest1 {
     vertShader: WebGLShader | null = null;
     fragShader: WebGLShader | null = null;
     program: WebGLProgram | null = null;

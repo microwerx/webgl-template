@@ -1377,7 +1377,7 @@ function testMaterialLibrary(fluxions) {
     return true;
 }
 /// <reference path="Fluxions.ts" />
-class WebGLTest {
+class WebGLTest1 {
     constructor() {
         this.vertShader = null;
         this.fragShader = null;
@@ -1906,12 +1906,12 @@ void main(void)
 /// <reference path="IndexedGeometryMesh.ts" />
 /// <reference path="Texture.ts" />
 /// <reference path="MaterialLibrary.ts" />
-/// <reference path="WebGLTest.ts" />
+/// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
 class Fluxions {
     constructor(gl) {
         this.gl = gl;
-        this.testWebGL = new WebGLTest();
+        this.testWebGL1 = new WebGLTest1();
         this.testWebGL2 = new WebGLTest2();
     }
     CreateRenderConfig(vertShaderText, fragShaderText) {
