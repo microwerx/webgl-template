@@ -6,6 +6,7 @@ class WebGLTest2 {
     fluxions: Fluxions | null = null;
     renderConfig: RenderConfig | null = null;
     geometryMesh: IndexedGeometryMesh | null = null;
+    initialized: boolean = false;
 
     // Original properties
     vertShader: WebGLShader | null = null;
@@ -87,27 +88,30 @@ void main(void)
     vec3 N = normalize (VS_Normal);
     float NdotL = max(0.0, dot(N, L));
     gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
 }
         `;
 
     constructor() { }
 
     test(gl: WebGLRenderingContext): boolean {
-        this.fluxions = new Fluxions(gl);
+        if (!this.fluxions) {
+            this.fluxions = new Fluxions(gl);
 
-        if (!this.initShaders(gl)) {
-            this.kill(gl);
-            return false;
-        }
-        if (!this.initBuffers(gl)) {
-            this.kill(gl);
-            return false;
+            if (!this.initShaders(gl)) {
+                this.kill(gl);
+                return false;
+            }
+            if (!this.initBuffers(gl)) {
+                this.kill(gl);
+                return false;
+            }
         }
         if (!this.drawScene(gl)) {
             this.kill(gl);
             return false;
         }
-        this.kill(gl);
+        //this.kill(gl);
         return true;
     }
 
@@ -232,23 +236,22 @@ void main(void)
             new ImageData(new Uint8ClampedArray([0, 0, 255, 255]), 1, 1),
             new ImageData(new Uint8ClampedArray([255, 255, 0, 255]), 1, 1)
         ];
-        const texture2DSPI = new ImageData(new Uint8ClampedArray([
-            255, 0, 255, 255,
-            255, 255, 0, 255,
-            0, 255, 255, 255,
-            127, 127, 127, 255
-        ]), 2, 2);
+        const checkerBoardImage: ImageData = Texture.CreateCheckerBoard(8, 8, 8, [30, 30, 30, 255], [210, 210, 210, 255]);
 
         this.texture2D = gl.createTexture();
         this.textureCM = gl.createTexture();
         if (!this.texture2D || !this.textureCM)
             return false;
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture2DSPI);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, checkerBoardImage);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
         for (let i = 0; i < 6; i++) {
             gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCubeMapSPI[i]);
         }
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");

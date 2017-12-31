@@ -114,6 +114,7 @@ void main(void)
                 this.mouseY = 0;
                 this.fluxions = null;
                 this.webglTest = null;
+                this.webglTest2 = null;
             }
 
             init() {
@@ -175,7 +176,7 @@ void main(void)
             OnInit() {
                 this.fluxions = new Fluxions(this.context.gl);
                 let renderConfig = this.fluxions.CreateRenderConfig(vertShader, fragShader);
-
+                this.webglTest2 = new WebGLTest2(this.context.gl);
             }
 
             OnUpdate(elapsedTime) {
@@ -191,8 +192,7 @@ void main(void)
                 // let webglTest = new WebGLTest(gl);
                 // webglTest.test(gl);
 
-                let webglTest2 = new WebGLTest2(gl);
-                webglTest2.test(gl);
+                this.webglTest2.test(gl);
             }
         }
 

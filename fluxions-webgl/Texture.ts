@@ -189,4 +189,33 @@ class Texture {
         let y2 = size - 1;
         return context.getImageData(x1, y1, size, size);
     }
+
+    static CreateCheckerBoard(w: number, h: number, size: number, blackColor: number[], whiteColor: number[]): ImageData {
+        const checkerboardImage = new ImageData(new Uint8ClampedArray([
+            ...blackColor,
+            ...whiteColor,
+            ...whiteColor,
+            ...blackColor
+        ]), 2, 2);
+
+        if (blackColor.length != 4 && whiteColor.length != 4)
+            return checkerboardImage;
+        let imageW = w * size;
+        let imageH = h * size;
+        let pixels = new Uint8ClampedArray(imageW * imageH * 4);
+        let addr = 0;
+        for (let y = 0; y < imageH; y++) {
+            let row = y / size | 0;
+            for (let x = 0; x < imageW; x++) {
+                let col = x / size | 0;
+                let isWhite: boolean = (row & 1) ? (col & 1) == 1 : (col & 1) == 0;
+                let color: number[] = isWhite ? whiteColor : blackColor;
+                for (let i = 0; i < 4; i++) {
+                    pixels[addr + i] = color[i];
+                }
+                addr += 4;
+            }
+        }
+        return new ImageData(pixels, imageW, imageH);
+    }
 }

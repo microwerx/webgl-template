@@ -1135,6 +1135,33 @@ class Texture {
         let y2 = size - 1;
         return context.getImageData(x1, y1, size, size);
     }
+    static CreateCheckerBoard(w, h, size, blackColor, whiteColor) {
+        const checkerboardImage = new ImageData(new Uint8ClampedArray([
+            ...blackColor,
+            ...whiteColor,
+            ...whiteColor,
+            ...blackColor
+        ]), 2, 2);
+        if (blackColor.length != 4 && whiteColor.length != 4)
+            return checkerboardImage;
+        let imageW = w * size;
+        let imageH = h * size;
+        let pixels = new Uint8ClampedArray(imageW * imageH * 4);
+        let addr = 0;
+        for (let y = 0; y < imageH; y++) {
+            let row = y / size | 0;
+            for (let x = 0; x < imageW; x++) {
+                let col = x / size | 0;
+                let isWhite = (row & 1) ? (col & 1) == 1 : (col & 1) == 0;
+                let color = isWhite ? whiteColor : blackColor;
+                for (let i = 0; i < 4; i++) {
+                    pixels[addr + i] = color[i];
+                }
+                addr += 4;
+            }
+        }
+        return new ImageData(pixels, imageW, imageH);
+    }
 }
 /// <reference path="./Fluxions.ts"/>
 class Property {
@@ -1579,6 +1606,7 @@ class WebGLTest2 {
         this.fluxions = null;
         this.renderConfig = null;
         this.geometryMesh = null;
+        this.initialized = false;
         // Original properties
         this.vertShader = null;
         this.fragShader = null;
@@ -1654,24 +1682,27 @@ void main(void)
     vec3 N = normalize (VS_Normal);
     float NdotL = max(0.0, dot(N, L));
     gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
 }
         `;
     }
     test(gl) {
-        this.fluxions = new Fluxions(gl);
-        if (!this.initShaders(gl)) {
-            this.kill(gl);
-            return false;
-        }
-        if (!this.initBuffers(gl)) {
-            this.kill(gl);
-            return false;
+        if (!this.fluxions) {
+            this.fluxions = new Fluxions(gl);
+            if (!this.initShaders(gl)) {
+                this.kill(gl);
+                return false;
+            }
+            if (!this.initBuffers(gl)) {
+                this.kill(gl);
+                return false;
+            }
         }
         if (!this.drawScene(gl)) {
             this.kill(gl);
             return false;
         }
-        this.kill(gl);
+        //this.kill(gl);
         return true;
     }
     kill(gl) {
@@ -1784,22 +1815,20 @@ void main(void)
             new ImageData(new Uint8ClampedArray([0, 0, 255, 255]), 1, 1),
             new ImageData(new Uint8ClampedArray([255, 255, 0, 255]), 1, 1)
         ];
-        const texture2DSPI = new ImageData(new Uint8ClampedArray([
-            255, 0, 255, 255,
-            255, 255, 0, 255,
-            0, 255, 255, 255,
-            127, 127, 127, 255
-        ]), 2, 2);
+        const checkerBoardImage = Texture.CreateCheckerBoard(8, 8, 8, [30, 30, 30, 255], [210, 210, 210, 255]);
         this.texture2D = gl.createTexture();
         this.textureCM = gl.createTexture();
         if (!this.texture2D || !this.textureCM)
             return false;
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture2DSPI);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, checkerBoardImage);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
         for (let i = 0; i < 6; i++) {
             gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCubeMapSPI[i]);
         }
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");
             return false;
