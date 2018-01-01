@@ -12,6 +12,8 @@ class RenderConfig {
     private _fragShaderCompileStatus: boolean = false;
     private _programInfoLog: string = "";
     private _programLinkStatus: boolean = false;
+    public uniforms: Map<string, WebGLUniformLocation | null> = new Map<string, WebGLUniformLocation | null>();
+    public uniformInfo: Map<string, WebGLActiveInfo | null> = new Map<string, WebGLActiveInfo | null>();
 
     constructor(private _context: Fluxions, private _vertShaderSource: string, private _fragShaderSource: string) {
         this.Reset(this._vertShaderSource, this._fragShaderSource);
@@ -43,7 +45,7 @@ class RenderConfig {
         return uloc;
     }
 
-    private Reset(vertShaderSource: string, fragShaderSource: string) {
+    public Reset(vertShaderSource: string, fragShaderSource: string): boolean {
         let gl = this._context.gl;
 
         let vertShader: WebGLShader | null = gl.createShader(gl.VERTEX_SHADER);
@@ -60,6 +62,9 @@ class RenderConfig {
                 this._vertShaderInfoLog = infoLog;
             this._vertShader = vertShader;
         }
+        else {
+            return false;
+        }
 
         let fragShader: WebGLShader | null = gl.createShader(gl.FRAGMENT_SHADER);
         if (fragShader) {
@@ -74,6 +79,9 @@ class RenderConfig {
             if (infoLog)
                 this._fragShaderInfoLog = infoLog;
             this._fragShader = fragShader;
+        }
+        else {
+            return false;
         }
 
         if (this._vertShaderCompileStatus && this._fragShaderCompileStatus) {
@@ -92,6 +100,27 @@ class RenderConfig {
                         this._programInfoLog = infolog;
                 }
             }
+        } else {
+            return false;
         }
+
+        this.updateActiveUniforms();
+
+        return true;
+    }
+
+    private updateActiveUniforms(): boolean {
+        let gl = this._context.gl;
+        let numUniforms = gl.getProgramParameter(this._program, gl.ACTIVE_UNIFORMS);
+        this.uniforms.clear();
+        this.uniformInfo.clear();
+        for (let i = 0; i < numUniforms; i++) {
+            let uniform: WebGLActiveInfo | null = gl.getActiveUniform(this._program, i);
+            if (!uniform)
+                continue;
+            this.uniformInfo.set(uniform.name, uniform);
+            this.uniforms.set(uniform.name, gl.getUniformLocation(this._program, uniform.name));
+        }
+        return true;
     }
 }

@@ -613,6 +613,74 @@ class Matrix4 {
         return new Matrix4(this.m11, this.m12, this.m13, this.m14, this.m21, this.m22, this.m23, this.m24, this.m31, this.m32, this.m33, this.m34, this.m41, this.m42, this.m43, this.m44);
     }
 } // class Matrix4
+/// <reference path="Vector4.ts" />
+var Colors;
+(function (Colors) {
+    function lerp(a, b, mix) {
+        return a * mix + (1 - mix) * b;
+    }
+    const DarkIntensity = 30;
+    const LightIntensity = 210;
+    const MediumIntensity = lerp(DarkIntensity, LightIntensity, 0.5);
+    const GrayIntensity33 = lerp(DarkIntensity, LightIntensity, 0.66);
+    const GrayIntensity66 = lerp(DarkIntensity, LightIntensity, 0.33);
+    const Gr33Intensity = lerp(DarkIntensity, LightIntensity, 0.66);
+    const Gr66Intensity = lerp(DarkIntensity, LightIntensity, 0.33);
+    Colors.Black = [30, 30, 30, 255];
+    Colors.White = [210, 210, 210, 255];
+    Colors.Gray66 = [150, 150, 150, 255];
+    Colors.Gray33 = [91, 91, 91, 255];
+    Colors.Red = [210, 30, 30, 255];
+    Colors.Orange = [210, 150, 30, 255];
+    Colors.Yellow = [210, 210, 30, 255];
+    Colors.Green = [30, 210, 30, 255];
+    Colors.Cyan = [30, 210, 210, 255];
+    Colors.Blue = [30, 30, 210, 255];
+    Colors.Indigo = [91, 30, 210, 255];
+    Colors.Violet = [150, 30, 150, 255];
+    Colors.Magenta = [210, 30, 210, 255];
+    // export const DarkGreen: number[] = [30, 91, 30, 255];
+    Colors.Brown = [150, 91, 30, 255];
+    Colors.SkyBlue = [30, 150, 210, 255];
+    Colors.DarkRed = [120, 30, 30, 255];
+    Colors.DarkCyan = [30, 120, 120, 255];
+    Colors.DarkGreen = [30, 120, 30, 255];
+    Colors.DarkMagenta = [120, 30, 120, 255];
+    Colors.DarkBlue = [30, 30, 120, 255];
+    Colors.DarkYellow = [120, 120, 30, 255];
+    Colors.LightRed = [210, 120, 120, 255];
+    Colors.LightCyan = [120, 210, 210, 255];
+    Colors.LightGreen = [120, 210, 120, 255];
+    Colors.LightMagenta = [210, 120, 210, 255];
+    Colors.LightBlue = [120, 120, 210, 255];
+    Colors.LightYellow = [210, 210, 120, 255];
+    Colors.ArneOrange = [235, 137, 49, 255];
+    Colors.ArneYellow = [247, 226, 107, 255];
+    Colors.ArneDarkGreen = [47, 72, 78, 255];
+    Colors.ArneGreen = [68, 137, 26, 255];
+    Colors.ArneSlimeGreen = [163, 206, 39, 255];
+    Colors.ArneNightBlue = [27, 38, 50, 255];
+    Colors.ArneSeaBlue = [0, 87, 132, 255];
+    Colors.ArneSkyBlue = [49, 162, 242, 255];
+    Colors.ArneCloudBlue = [178, 220, 239, 255];
+    Colors.ArneDarkBlue = [52, 42, 151, 255];
+    Colors.ArneDarkGray = [101, 109, 113, 255];
+    Colors.ArneLightGray = [204, 204, 204, 255];
+    Colors.ArneDarkRed = [115, 41, 48, 255];
+    Colors.ArneRose = [203, 67, 167, 255];
+    Colors.ArneTaupe = [82, 79, 64, 255];
+    Colors.ArneGold = [173, 157, 51, 255];
+    Colors.ArneTangerine = [236, 71, 0, 255];
+    Colors.ArneHoney = [250, 180, 11, 255];
+    Colors.ArneMossyGreen = [17, 94, 51, 255];
+    Colors.ArneDarkCyan = [20, 128, 126, 255];
+    Colors.ArneCyan = [21, 194, 165, 255];
+    Colors.ArneBlue = [34, 90, 246, 255];
+    Colors.ArneIndigo = [153, 100, 249, 255];
+    Colors.ArnePink = [247, 142, 214, 255];
+    Colors.ArneSkin = [244, 185, 144, 255];
+    Colors.ArneBlack = [30, 30, 30, 255];
+})(Colors || (Colors = {}));
 /// <reference path="./fluxions.ts"/>
 class RenderConfig {
     constructor(_context, _vertShaderSource, _fragShaderSource) {
@@ -630,6 +698,8 @@ class RenderConfig {
         this._fragShaderCompileStatus = false;
         this._programInfoLog = "";
         this._programLinkStatus = false;
+        this.uniforms = new Map();
+        this.uniformInfo = new Map();
         this.Reset(this._vertShaderSource, this._fragShaderSource);
     }
     IsCompiledAndLinked() {
@@ -669,6 +739,9 @@ class RenderConfig {
                 this._vertShaderInfoLog = infoLog;
             this._vertShader = vertShader;
         }
+        else {
+            return false;
+        }
         let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
         if (fragShader) {
             gl.shaderSource(fragShader, fragShaderSource);
@@ -682,6 +755,9 @@ class RenderConfig {
             if (infoLog)
                 this._fragShaderInfoLog = infoLog;
             this._fragShader = fragShader;
+        }
+        else {
+            return false;
         }
         if (this._vertShaderCompileStatus && this._fragShaderCompileStatus) {
             this._program = gl.createProgram();
@@ -700,6 +776,25 @@ class RenderConfig {
                 }
             }
         }
+        else {
+            return false;
+        }
+        this.updateActiveUniforms();
+        return true;
+    }
+    updateActiveUniforms() {
+        let gl = this._context.gl;
+        let numUniforms = gl.getProgramParameter(this._program, gl.ACTIVE_UNIFORMS);
+        this.uniforms.clear();
+        this.uniformInfo.clear();
+        for (let i = 0; i < numUniforms; i++) {
+            let uniform = gl.getActiveUniform(this._program, i);
+            if (!uniform)
+                continue;
+            this.uniformInfo.set(uniform.name, uniform);
+            this.uniforms.set(uniform.name, gl.getUniformLocation(this._program, uniform.name));
+        }
+        return true;
     }
 }
 /// <reference path="./Fluxions.ts" />
@@ -1599,6 +1694,7 @@ void main(void)
 }
 ;
 /// <reference path="Fluxions.ts" />
+/// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
 class WebGLTest2 {
     constructor() {
@@ -1607,32 +1703,15 @@ class WebGLTest2 {
         this.renderConfig = null;
         this.geometryMesh = null;
         this.initialized = false;
+        this.shaderLoader = null;
         // Original properties
-        this.vertShader = null;
-        this.fragShader = null;
-        this.program = null;
-        this.vbo = null;
-        this.ibo = null;
         this.texture2D = null;
         this.textureCM = null;
-        this.uniforms = new Map([
-            ["CameraMatrix", null],
-            ["ProjectionMatrix", null],
-            ["WorldMatrix", null]
-        ]);
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(-.2, 0, 0);
         this.Object2Matrix = Matrix4.makeTranslation(.2, 0, 0);
         this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
-        this.vertices = [
-            0, 1, 0, 1,
-            -1, -1, 0, 1,
-            1, -1, 0, 1
-        ];
-        this.indices = [
-            0, 1, 2
-        ];
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
 uniform mat4 CameraMatrix;
@@ -1667,7 +1746,7 @@ uniform vec2  mouse;
 uniform vec3  LightDir;
 
 uniform sampler2D Texture2D;
-uniform samplerCube TextureCubeMap;
+uniform samplerCube TextureCube;
 
 varying vec4 VS_Position;
 varying vec3 VS_Normal;
@@ -1682,6 +1761,7 @@ void main(void)
     vec3 N = normalize (VS_Normal);
     float NdotL = max(0.0, dot(N, L));
     gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = textureCube(TextureCube, vec3(-1.0, VS_TexCoord.s, VS_TexCoord.t));
     gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
 }
         `;
@@ -1706,26 +1786,6 @@ void main(void)
         return true;
     }
     kill(gl) {
-        if (this.vertShader) {
-            gl.deleteShader(this.vertShader);
-            this.vertShader = null;
-        }
-        if (this.fragShader) {
-            gl.deleteShader(this.fragShader);
-            this.fragShader = null;
-        }
-        if (this.program) {
-            gl.deleteProgram(this.program);
-            this.program = null;
-        }
-        if (this.vbo) {
-            gl.deleteBuffer(this.vbo);
-            this.vbo = null;
-        }
-        if (this.ibo) {
-            gl.deleteBuffer(this.ibo);
-            this.ibo = null;
-        }
         if (this.texture2D) {
             gl.deleteTexture(this.texture2D);
             this.texture2D = null;
@@ -1739,38 +1799,7 @@ void main(void)
     initShaders(gl) {
         if (this.fluxions) {
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-        }
-        this.vertShader = gl.createShader(gl.VERTEX_SHADER);
-        this.fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        this.program = gl.createProgram();
-        if (!this.vertShader || !this.fragShader || !this.program)
-            return false;
-        gl.shaderSource(this.vertShader, this.vertShaderSource);
-        gl.compileShader(this.vertShader);
-        if (!gl.getShaderParameter(this.vertShader, gl.COMPILE_STATUS)) {
-            console.error(gl.getShaderInfoLog(this.vertShader));
-            return false;
-        }
-        gl.attachShader(this.program, this.vertShader);
-        gl.shaderSource(this.fragShader, this.fragShaderSource);
-        gl.compileShader(this.fragShader);
-        if (!gl.getShaderParameter(this.fragShader, gl.COMPILE_STATUS)) {
-            console.error(gl.getShaderInfoLog(this.fragShader));
-            return false;
-        }
-        gl.attachShader(this.program, this.fragShader);
-        gl.linkProgram(this.program);
-        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-            console.error(gl.getProgramInfoLog(this.program));
-            return false;
-        }
-        let numUniforms = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS);
-        this.uniforms.clear();
-        for (let i = 0; i < numUniforms; i++) {
-            let uniform = gl.getActiveUniform(this.program, i);
-            if (!uniform)
-                continue;
-            this.uniforms.set(uniform.name, gl.getUniformLocation(this.program, uniform.name));
+            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
         }
         return true;
     }
@@ -1792,42 +1821,39 @@ void main(void)
         this.geometryMesh.AddIndex(0);
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
-        this.vbo = gl.createBuffer();
-        this.ibo = gl.createBuffer();
-        if (!this.vbo || !this.ibo)
-            return false;
-        gl.getError();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
             return false;
         }
-        const textureCubeMapSPI = [
-            new ImageData(new Uint8ClampedArray([255, 0, 0, 255]), 1, 1),
-            new ImageData(new Uint8ClampedArray([0, 255, 255, 255]), 1, 1),
-            new ImageData(new Uint8ClampedArray([0, 255, 0, 255]), 1, 1),
-            new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1),
-            new ImageData(new Uint8ClampedArray([0, 0, 255, 255]), 1, 1),
-            new ImageData(new Uint8ClampedArray([255, 255, 0, 255]), 1, 1)
+        const cubeColorsLight = [
+            Colors.LightRed,
+            Colors.LightCyan,
+            Colors.LightGreen,
+            Colors.LightMagenta,
+            Colors.LightBlue,
+            Colors.LightYellow
         ];
-        const checkerBoardImage = Texture.CreateCheckerBoard(8, 8, 8, [30, 30, 30, 255], [210, 210, 210, 255]);
+        const cubeColorsDark = [
+            Colors.DarkRed,
+            Colors.DarkCyan,
+            Colors.DarkGreen,
+            Colors.DarkMagenta,
+            Colors.DarkBlue,
+            Colors.DarkYellow
+        ];
         this.texture2D = gl.createTexture();
         this.textureCM = gl.createTexture();
         if (!this.texture2D || !this.textureCM)
             return false;
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, checkerBoardImage);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, Colors.Blue, Colors.Yellow));
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
         for (let i = 0; i < 6; i++) {
-            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureCubeMapSPI[i]);
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, cubeColorsDark[i], cubeColorsLight[i]));
         }
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");
@@ -1836,53 +1862,46 @@ void main(void)
         return true;
     }
     drawScene(gl) {
+        if (!this.renderConfig)
+            return false;
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
-        let vloc = gl.getAttribLocation(this.program, "aPosition");
-        if (vloc >= 0) {
-            gl.vertexAttribPointer(vloc, 4, gl.FLOAT, false, 0, 0);
-            gl.enableVertexAttribArray(vloc);
-        }
-        gl.useProgram(this.program);
+        this.renderConfig.Use();
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
         let loc;
-        if (loc = this.uniforms.get("CameraMatrix")) {
+        if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
         }
-        if (loc = this.uniforms.get("LightDir")) {
+        if (loc = this.renderConfig.uniforms.get("LightDir")) {
             gl.uniform3fv(loc, new Vector3(0.25, 0.25, 1.0).toFloat32Array());
         }
-        if (loc = this.uniforms.get("ProjectionMatrix")) {
+        if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
             this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
-        if (loc = this.uniforms.get("Texture2D")) {
+        if (loc = this.renderConfig.uniforms.get("Texture2D")) {
             gl.uniform1i(loc, 0);
         }
-        if (loc = this.uniforms.get("TextureCubeMap")) {
+        if (loc = this.renderConfig.uniforms.get("TextureCube")) {
             gl.uniform1i(loc, 1);
         }
-        let wmloc = this.uniforms.get("WorldMatrix");
+        let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
         if (wmloc) {
             let matrix = this.Object1Matrix.asColMajorArray();
             gl.uniformMatrix4fv(wmloc, false, matrix);
         }
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        if (this.geometryMesh && this.renderConfig) {
+            this.geometryMesh.Render(this.renderConfig);
+        }
         if (wmloc) {
             let matrix = this.Object2Matrix.asColMajorArray();
             gl.uniformMatrix4fv(wmloc, false, matrix);
         }
-        //gl.drawElements(gl.TRIANGLES, 3, gl.UNSIGNED_SHORT, 0);
         if (this.geometryMesh && this.renderConfig) {
             this.geometryMesh.Render(this.renderConfig);
-        }
-        if (vloc >= 0) {
-            gl.disableVertexAttribArray(vloc);
         }
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -1896,18 +1915,57 @@ void main(void)
     }
 }
 ;
+/// <reference path="./Fluxions.ts" />
+/// <reference path="./RenderConfig.ts" />
+var Utils;
+(function (Utils) {
+    class ShaderLoader {
+        constructor(rc, vertShaderUrl, fragShaderUrl) {
+            this.rc = rc;
+            this.vertShaderUrl = vertShaderUrl;
+            this.fragShaderUrl = fragShaderUrl;
+            this.vertLoaded = false;
+            this.fragLoaded = false;
+            this.vertShaderSource = "";
+            this.fragShaderSource = "";
+            let self = this;
+            let vertAjax = new XMLHttpRequest();
+            vertAjax.addEventListener("load", (e) => {
+                self.vertShaderSource = vertAjax.responseText;
+                self.vertLoaded = true;
+                if (self.vertLoaded && self.fragLoaded) {
+                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+                }
+            });
+            vertAjax.open("GET", vertShaderUrl);
+            vertAjax.send();
+            let fragAjax = new XMLHttpRequest();
+            fragAjax.addEventListener("load", (e) => {
+                self.fragShaderSource = fragAjax.responseText;
+                self.fragLoaded = true;
+                if (self.vertLoaded && self.fragLoaded)
+                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+            });
+            fragAjax.open("GET", fragShaderUrl);
+            fragAjax.send();
+        }
+    }
+    Utils.ShaderLoader = ShaderLoader;
+})(Utils || (Utils = {}));
 /// <reference path="Vector2.ts" />
 /// <reference path="Vector3.ts" />
 /// <reference path="Vector4.ts" />
 /// <reference path="Matrix2.ts" />
 /// <reference path="Matrix3.ts" />
 /// <reference path="Matrix4.ts" />
+/// <reference path="Colors.ts" />
 /// <reference path="RenderConfig.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
 /// <reference path="Texture.ts" />
 /// <reference path="MaterialLibrary.ts" />
 /// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
+/// <reference path="Utils.ts" />
 class Fluxions {
     constructor(gl) {
         this.gl = gl;

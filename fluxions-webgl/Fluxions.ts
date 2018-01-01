@@ -4,12 +4,14 @@
 /// <reference path="Matrix2.ts" />
 /// <reference path="Matrix3.ts" />
 /// <reference path="Matrix4.ts" />
+/// <reference path="Colors.ts" />
 /// <reference path="RenderConfig.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
 /// <reference path="Texture.ts" />
 /// <reference path="MaterialLibrary.ts" />
 /// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
+/// <reference path="Utils.ts" />
 
 class Fluxions {
     constructor(public gl: WebGLRenderingContext) {
