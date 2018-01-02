@@ -1951,6 +1951,25 @@ var Utils;
         }
     }
     Utils.ShaderLoader = ShaderLoader;
+    class TextFileLoader {
+        constructor(url) {
+            this.loaded = false;
+            this.error = false;
+            this.data = "";
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            ajax.addEventListener("load", (e) => {
+                if (!ajax.responseText)
+                    self.error = true;
+                else
+                    self.data = ajax.responseText;
+                self.loaded = true;
+            });
+            ajax.open("GET", url);
+            ajax.send();
+        }
+    }
+    Utils.TextFileLoader = TextFileLoader;
 })(Utils || (Utils = {}));
 /// <reference path="Vector2.ts" />
 /// <reference path="Vector3.ts" />

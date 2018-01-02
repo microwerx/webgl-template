@@ -31,4 +31,24 @@ namespace Utils {
             fragAjax.send();
         }
     }
+
+    export class TextFileLoader {
+        public loaded: boolean = false;
+        public error: boolean = false;
+        public data: string = "";
+
+        constructor(url: string) {
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            ajax.addEventListener("load", (e) => {
+                if (!ajax.responseText)
+                    self.error = true;
+                else
+                    self.data = ajax.responseText;
+                self.loaded = true;
+            });
+            ajax.open("GET", url);
+            ajax.send();
+        }
+    }
 }

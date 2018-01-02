@@ -11,94 +11,6 @@
     <h1>WebGL Template</h1>
     <hr/>
 
-    <pre id="vertShader" type="x-shader/x-fragment">
-        uniform mat4 WorldMatrix;
-        uniform mat4 CameraMatrix;
-        uniform mat4 ProjectionMatrix;
-
-        attribute vec4 aPosition;
-        attribute vec3 aNormal;
-        attribute vec4 aColor;
-        attribute vec4 aTexCoord;
-
-        varying vec4 VS_Position;
-        varying vec4 VS_Normal;
-        varying vec4 VS_Color;
-        varying vec4 VS_TexCoord;
-
-        void main(void)
-        {
-            VS_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
-            VS_Normal = aNormal;
-            VS_Color = aColor;
-            VS_TexCoord = aTexCoord;
-            gl_Position = VS_Position;
-        }
-    </pre>
-
-    <pre id="fragShader" type="x-shader/x-fragment">
-        precision mediump float;
-
-        uniform float timer;
-        uniform vec2  mouse;
-
-        varying vec4 VS_Position;
-        varying vec3 VS_Normal;
-        varying vec4 VS_Color;
-        varying vec4 VS_TexCoord;
-
-        void main(void)
-        {
-            gl_FragColor= VS_Color;
-        }
-    </pre>
-
-    <script>
-        var vertShader =
-            `
-uniform mat4 WorldMatrix;
-uniform mat4 CameraMatrix;
-uniform mat4 ProjectionMatrix;
-
-attribute vec4 aPosition;
-attribute vec3 aNormal;
-attribute vec4 aColor;
-attribute vec4 aTexCoord;
-
-varying vec4 VS_Position;
-varying vec4 VS_Normal;
-varying vec4 VS_Color;
-varying vec4 VS_TexCoord;
-
-void main(void)
-{
-    VS_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
-    VS_Normal = aNormal;
-    VS_Color = aColor;
-    VS_TexCoord = aTexCoord;
-    gl_Position = VS_Position;
-}
-        `
-
-        var fragShader =
-            `
-        precision mediump float;
-
-        uniform float timer;
-        uniform vec2  mouse;
-
-        varying vec4 VS_Position;
-        varying vec3 VS_Normal;
-        varying vec4 VS_Color;
-        varying vec4 VS_TexCoord;
-
-        void main(void)
-        {
-            gl_FragColor= VS_Color;
-        }
-                `
-    </script>
-
     <script>
         "use strict";
         class WGLApp {
@@ -118,7 +30,7 @@ void main(void)
             }
 
             init() {
-                this.context = WebGLTemplate.Context.CreateContext();
+                this.context = WebGLTemplate.Context.CreateContext(640, 384);
                 if (this.context) {
                     this.gl = this.context.gl;
                     this.OnInit();
@@ -174,8 +86,6 @@ void main(void)
             }
 
             OnInit() {
-                this.fluxions = new Fluxions(this.context.gl);
-                let renderConfig = this.fluxions.CreateRenderConfig(vertShader, fragShader);
                 this.webglTest2 = new WebGLTest2(this.context.gl);
             }
 
@@ -188,10 +98,6 @@ void main(void)
                 let gl = this.context.gl;
                 let timer = this.timer;
                 context.ClearScreen(0.8 + 0.2 * Math.sin(Math.PI * timer), 0.4, 0.8);
-
-                // let webglTest = new WebGLTest(gl);
-                // webglTest.test(gl);
-
                 this.webglTest2.test(gl);
             }
         }
