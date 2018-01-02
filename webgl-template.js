@@ -731,8 +731,15 @@ class RenderConfig {
             gl.compileShader(vertShader);
             let status = gl.getShaderParameter(vertShader, gl.COMPILE_STATUS);
             let infoLog = null;
-            if (!status)
+            if (!status) {
                 infoLog = gl.getShaderInfoLog(vertShader);
+                let errorElement = document.getElementById("errors");
+                if (!errorElement && infoLog) {
+                    let newDiv = document.createElement("div");
+                    newDiv.appendChild(document.createTextNode(infoLog));
+                    document.body.appendChild(newDiv);
+                }
+            }
             if (status)
                 this._vertShaderCompileStatus = true;
             if (infoLog)
@@ -748,8 +755,15 @@ class RenderConfig {
             gl.compileShader(fragShader);
             let status = gl.getShaderParameter(fragShader, gl.COMPILE_STATUS);
             let infoLog = null;
-            if (!status)
+            if (!status) {
                 infoLog = gl.getShaderInfoLog(fragShader);
+                let errorElement = document.getElementById("errors");
+                if (!errorElement && infoLog) {
+                    let newDiv = document.createElement("div");
+                    newDiv.appendChild(document.createTextNode(infoLog));
+                    document.body.appendChild(newDiv);
+                }
+            }
             if (status)
                 this._fragShaderCompileStatus = true;
             if (infoLog)
@@ -770,9 +784,16 @@ class RenderConfig {
                 }
                 else {
                     this._programLinkStatus = false;
-                    let infolog = gl.getProgramInfoLog(this._program);
-                    if (infolog)
-                        this._programInfoLog = infolog;
+                    let infoLog = gl.getProgramInfoLog(this._program);
+                    if (infoLog) {
+                        this._programInfoLog = infoLog;
+                        let errorElement = document.getElementById("errors");
+                        if (!errorElement && infoLog) {
+                            let newDiv = document.createElement("div");
+                            newDiv.appendChild(document.createTextNode(infoLog));
+                            document.body.appendChild(newDiv);
+                        }
+                    }
                 }
             }
         }
@@ -986,21 +1007,21 @@ class IndexedGeometryMesh {
     VertexAttrib1(index, x = 0) {
         if (index < 0 || index >= 8)
             return;
-        this._attribInfo[index].attrib4(x, 0, 0, 0);
+        this._attribInfo[index].attrib4(x, 0, 0, 1);
         if (index == 0)
             this.emitVertex();
     }
     VertexAttrib2(index, x = 0, y = 0) {
         if (index < 0 || index >= 8)
             return;
-        this._attribInfo[index].attrib4(x, y, 0, 0);
+        this._attribInfo[index].attrib4(x, y, 0, 1);
         if (index == 0)
             this.emitVertex();
     }
     VertexAttrib3(index, x = 0, y = 0, z = 0) {
         if (index < 0 || index >= 8)
             return;
-        this._attribInfo[index].attrib4(x, y, z, 0);
+        this._attribInfo[index].attrib4(x, y, z, 1);
         if (index == 0)
             this.emitVertex();
     }
@@ -1821,6 +1842,23 @@ void main(void)
         this.geometryMesh.AddIndex(0);
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
+        let x = 2.0 * 640 / 384;
+        let y = 2.0;
+        this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, -x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, x, -y);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, -x, -y);
+        this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
+        this.geometryMesh.AddIndex(3);
+        this.geometryMesh.AddIndex(4);
+        this.geometryMesh.AddIndex(5);
+        this.geometryMesh.AddIndex(6);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
             return false;
@@ -1879,7 +1917,8 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
         if (loc = this.renderConfig.uniforms.get("Texture2D")) {

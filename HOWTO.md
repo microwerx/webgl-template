@@ -148,3 +148,13 @@ The supported member functions are:
     }
 
 TODO: finish this section
+
+## Examples
+
+### Real-time Ray Tracing
+
+TODO: implement sphere based ray tracing with GLSL
+
+### Physically Based BRDF
+
+TODO: implement physically based BRDF

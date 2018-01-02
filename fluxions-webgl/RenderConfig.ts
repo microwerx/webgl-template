@@ -54,8 +54,15 @@ class RenderConfig {
             gl.compileShader(vertShader);
             let status = gl.getShaderParameter(vertShader, gl.COMPILE_STATUS);
             let infoLog: string | null = null;
-            if (!status)
+            if (!status) {
                 infoLog = gl.getShaderInfoLog(vertShader);
+                let errorElement: HTMLElement | null = document.getElementById("errors");
+                if (!errorElement && infoLog) {
+                    let newDiv: HTMLDivElement = document.createElement("div");
+                    newDiv.appendChild(document.createTextNode(infoLog));
+                    document.body.appendChild(newDiv);
+                }
+            }
             if (status)
                 this._vertShaderCompileStatus = true;
             if (infoLog)
@@ -72,8 +79,15 @@ class RenderConfig {
             gl.compileShader(fragShader);
             let status = gl.getShaderParameter(fragShader, gl.COMPILE_STATUS);
             let infoLog: string | null = null;
-            if (!status)
+            if (!status) {
                 infoLog = gl.getShaderInfoLog(fragShader);
+                let errorElement: HTMLElement | null = document.getElementById("errors");
+                if (!errorElement && infoLog) {
+                    let newDiv: HTMLDivElement = document.createElement("div");
+                    newDiv.appendChild(document.createTextNode(infoLog));
+                    document.body.appendChild(newDiv);
+                }
+            }
             if (status)
                 this._fragShaderCompileStatus = true;
             if (infoLog)
@@ -95,9 +109,16 @@ class RenderConfig {
                 }
                 else {
                     this._programLinkStatus = false;
-                    let infolog = gl.getProgramInfoLog(this._program);
-                    if (infolog)
-                        this._programInfoLog = infolog;
+                    let infoLog = gl.getProgramInfoLog(this._program);
+                    if (infoLog) {
+                        this._programInfoLog = infoLog;
+                        let errorElement: HTMLElement | null = document.getElementById("errors");
+                        if (!errorElement && infoLog) {
+                            let newDiv: HTMLDivElement = document.createElement("div");
+                            newDiv.appendChild(document.createTextNode(infoLog));
+                            document.body.appendChild(newDiv);
+                        }
+                    }
                 }
             }
         } else {

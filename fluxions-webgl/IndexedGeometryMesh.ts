@@ -191,19 +191,19 @@ class IndexedGeometryMesh {
 
     VertexAttrib1(index: number, x: number = 0): void {
         if (index < 0 || index >= 8) return;
-        this._attribInfo[index].attrib4(x, 0, 0, 0);
+        this._attribInfo[index].attrib4(x, 0, 0, 1);
         if (index == 0) this.emitVertex();
     }
 
     VertexAttrib2(index: number, x: number = 0, y: number = 0): void {
         if (index < 0 || index >= 8) return;
-        this._attribInfo[index].attrib4(x, y, 0, 0);
+        this._attribInfo[index].attrib4(x, y, 0, 1);
         if (index == 0) this.emitVertex();
     }
 
     VertexAttrib3(index: number, x: number = 0, y: number = 0, z: number = 0): void {
         if (index < 0 || index >= 8) return;
-        this._attribInfo[index].attrib4(x, y, z, 0);
+        this._attribInfo[index].attrib4(x, y, z, 1);
         if (index == 0) this.emitVertex();
     }
 

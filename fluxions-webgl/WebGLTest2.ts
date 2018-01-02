@@ -141,6 +141,24 @@ void main(void)
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
 
+        let x: number = 2.0 * 640 / 384;
+        let y: number = 2.0;
+        this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, -x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, x, -y);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, -x, -y);
+        this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
+        this.geometryMesh.AddIndex(3);
+        this.geometryMesh.AddIndex(4);
+        this.geometryMesh.AddIndex(5);
+        this.geometryMesh.AddIndex(6);
+
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
             return false;
@@ -209,7 +227,8 @@ void main(void)
 
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect: number = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
 
