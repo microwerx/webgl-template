@@ -141,6 +141,8 @@ void main(void)
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
 
+        this.geometryMesh.LoadObject("assets/mitsuba/mitsuba.obj");
+
         let x: number = 2.0 * 640 / 384;
         let y: number = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);

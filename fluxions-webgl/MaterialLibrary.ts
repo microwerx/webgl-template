@@ -1,4 +1,6 @@
 /// <reference path="./Fluxions.ts"/>
+/// <reference path="./Utils.ts" />
+
 
 class Property {
     private _loc: number = -1;

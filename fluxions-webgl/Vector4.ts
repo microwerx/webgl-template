@@ -64,6 +64,10 @@ class Vector4 {
         return new Float32Array([this.x, this.y, this.z, this.w]);
     }
 
+    toArray(): number[] {
+        return [this.x, this.y, this.z, this.w];
+    }
+
     toVector2(): Vector2 {
         return new Vector2(this.x, this.y);
     }

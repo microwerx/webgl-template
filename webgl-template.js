@@ -196,6 +196,9 @@ class Vector4 {
     toFloat32Array() {
         return new Float32Array([this.x, this.y, this.z, this.w]);
     }
+    toArray() {
+        return [this.x, this.y, this.z, this.w];
+    }
     toVector2() {
         return new Vector2(this.x, this.y);
     }
@@ -865,8 +868,26 @@ class Surface {
         this.first = first;
         this.offset = offset;
         this.count = 0;
+        this.properties = new Map([
+            ["o", "unknown"],
+            ["g", "unknown"],
+            ["s", "unknown"],
+            ["usemtl", ""],
+            ["mtllib", ""]
+        ]);
+        this.SetProperty("usemtl", material);
     }
     add() { this.count++; }
+    SetProperty(key, value) {
+        this.properties.set(key, value);
+    }
+    GetProperty(key) {
+        let value = this.properties.get(key);
+        if (value) {
+            return value;
+        }
+        return "";
+    }
 }
 class IndexedGeometryMesh {
     constructor(_context, _maxVertices = 32767, _maxIndices = 32767) {
@@ -932,6 +953,31 @@ class IndexedGeometryMesh {
         this._dirty = false;
         return true;
     }
+    Reset() {
+        this._vertices = new Float32Array(this._maxVertices);
+        if (this._maxIndices < 32768) {
+            this._indices = new Uint16Array(this._maxIndices);
+            this._isUint32 = false;
+            this._indexTypeSize = 2;
+        }
+        else {
+            this._indices = new Uint32Array(this._maxIndices);
+            this._isUint32 = true;
+            this._indexTypeSize = 4;
+        }
+        this._surfaces = [];
+        this._indexTypeSize = 0;
+        this._indexCount = 0;
+        this._vertexCount = 0;
+        this._currentMaterialName = "unknown";
+        this._dirty = true;
+    }
+    LoadObject(sceneUrl) {
+        let self = this;
+        let tfl = new Utils.TextFileLoader(sceneUrl, (data) => {
+            self.loadObjectData(data);
+        });
+    }
     Render(rc, materialName) {
         let gl = this._context.gl;
         if (this._dirty) {
@@ -996,6 +1042,9 @@ class IndexedGeometryMesh {
             return;
         if (index > this._vertexCount) {
             this._indices[this._indexCount] = 0;
+        }
+        else if (index < 0) {
+            this._indices[this._indexCount] = this._indexCount;
         }
         else {
             this._indices[this._indexCount] = index;
@@ -1065,6 +1114,247 @@ class IndexedGeometryMesh {
         }
         this._vertexCount++;
         this._dirty = true;
+    }
+    loadObjectData(data) {
+        if (data == "unknown")
+            return;
+        let lines = data.split(/\r\n|\r|\n/g);
+        let gl = this._context.gl;
+        this.Reset();
+        let vertexCount = 0;
+        let normalCount = 0;
+        let colorCount = 0;
+        let texcoordCount = 0;
+        let faces = 0;
+        let v = [];
+        let vn = [];
+        let vc = [];
+        let vt = [];
+        let va1 = [];
+        let va2 = [];
+        let va3 = [];
+        let va4 = [];
+        let OBJg = "";
+        let OBJo = "";
+        let OBJs = "";
+        let usemtl = "";
+        let mtllib = "";
+        let flushSurface = false;
+        for (let line of lines) {
+            let tokens = line.match(/\S+/g);
+            if (tokens == null || tokens.length === 0)
+                continue;
+            if (tokens[0][0] == "#") {
+                continue;
+            }
+            else if (tokens[0] == "v") {
+                v.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "vn") {
+                vn.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "vc") {
+                vc.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "vt") {
+                vt.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "va1") {
+                va1.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "va2") {
+                va2.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "va3") {
+                va3.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "va4") {
+                va4.push(this.makeArray(tokens, 1));
+            }
+            else if (tokens[0] == "f") {
+                let face = 1;
+                let faceIndices = [];
+                for (let face = 1; face < tokens.length; face++) {
+                    let vertexIndex = 0;
+                    let normalIndex = null;
+                    let texcoordIndex = null;
+                    let values = tokens[face].split("/");
+                    if (values.length >= 1) {
+                        vertexIndex = Number(values[0]);
+                        if (vertexIndex < 0)
+                            vertexIndex = v.length + vertexIndex;
+                        else if (vertexIndex > 0)
+                            vertexIndex -= 1; // correct for 1-indexing in the OBJ file
+                    }
+                    if (values.length == 2) {
+                        normalIndex = Number(values[1]);
+                        if (normalIndex < 0)
+                            normalIndex = vn.length + normalIndex;
+                        else if (normalIndex > 0)
+                            normalIndex--;
+                    }
+                    if (values.length == 3) {
+                        normalIndex = Number(values[2]);
+                        if (normalIndex < 0)
+                            normalIndex = vn.length + normalIndex;
+                        else if (normalIndex > 0)
+                            normalIndex--;
+                        texcoordIndex = Number(values[1]);
+                        if (texcoordIndex < 0)
+                            texcoordIndex = vt.length + texcoordIndex;
+                        else if (texcoordIndex > 0)
+                            texcoordIndex--;
+                    }
+                    var vertex = [vertexIndex, normalIndex, texcoordIndex];
+                    faceIndices.push(vertex);
+                }
+                if (faces === 0) {
+                    this.BeginSurface(gl.TRIANGLES);
+                    let surface = this._surfaces[this._surfaces.length - 1];
+                    surface.SetProperty("g", OBJg);
+                    surface.SetProperty("o", OBJo);
+                    surface.SetProperty("s", OBJs);
+                    surface.SetProperty("mtllib", mtllib);
+                    surface.SetProperty("usemtl", usemtl);
+                }
+                let vc_present = (vc.length == v.length) ? true : false;
+                let va1_present = (va1.length == v.length) ? true : false;
+                let va2_present = (va2.length == v.length) ? true : false;
+                let va3_present = (va3.length == v.length) ? true : false;
+                let va4_present = (va4.length == v.length) ? true : false;
+                let vt_present = (vt.length > 0) ? true : false;
+                let vn_present = (vn.length > 0) ? true : false;
+                // reset defaults
+                for (let i = 1; i < 8; i++) {
+                    this.VertexAttrib4(i, 0, 0, 0, 1);
+                }
+                let arrays = [
+                    v, vn, vc, vt, va1, va2, va3, va4
+                ];
+                let arrays_enabled = [
+                    true, vn_present, vc_present, vt_present, va1_present, va2_present, va3_present, va4_present
+                ];
+                for (let k = 1; k < faceIndices.length; k++) {
+                    let iv0 = 0;
+                    let iv1 = k % faceIndices.length;
+                    let iv2 = (k + 1) % faceIndices.length;
+                    let face_vertex1 = faceIndices[iv0][0];
+                    let face_vertex2 = faceIndices[iv1][0];
+                    let face_vertex3 = faceIndices[iv2][0];
+                    let face_normal1 = faceIndices[iv0][1];
+                    let face_normal2 = faceIndices[iv1][1];
+                    let face_normal3 = faceIndices[iv2][1];
+                    let face_texcoord1 = faceIndices[iv0][2];
+                    let face_texcoord2 = faceIndices[iv1][2];
+                    let face_texcoord3 = faceIndices[iv2][2];
+                    let indices = [
+                        [face_vertex1, face_vertex2, face_vertex3],
+                        [face_normal1, face_normal2, face_normal3],
+                        [face_vertex1, face_vertex2, face_vertex3],
+                        [face_texcoord1, face_texcoord2, face_texcoord3],
+                        [face_vertex1, face_vertex2, face_vertex3],
+                        [face_vertex1, face_vertex2, face_vertex3],
+                        [face_vertex1, face_vertex2, face_vertex3],
+                        [face_vertex1, face_vertex2, face_vertex3],
+                    ];
+                    for (let vindex = 0; vindex < 3; vindex++) {
+                        for (let arrayIndex = 7; arrayIndex >= 0; arrayIndex--) {
+                            if (arrays_enabled[arrayIndex]) {
+                                let x = arrays[arrayIndex][indices[arrayIndex][vindex]][0];
+                                let y = arrays[arrayIndex][indices[arrayIndex][vindex]][1];
+                                let z = arrays[arrayIndex][indices[arrayIndex][vindex]][2];
+                                let w = arrays[arrayIndex][indices[arrayIndex][vindex]][3];
+                                this.VertexAttrib4(arrayIndex, x, y, z, w);
+                            }
+                        }
+                    }
+                    this.AddIndex(-1);
+                    this.AddIndex(-1);
+                    this.AddIndex(-1);
+                    // if (vt_present) this.VertexAttrib4(3, vt[face_texcoord1][0], vt[face_texcoord1][1], vt[face_texcoord1][2], vt[face_texcoord1][3]);
+                    // if (vc_present) this.VertexAttrib4(2, vc[face_vertex1], vc[face_vertex1][1], vc[face_vertex1][2], vc[face_vertex1][3]);
+                    // if (vn_present) this.vertexAttrib3(1, vn[face_normal1][0], vn[face_normal1][1], vn[face_normal1][2]);
+                    // this.vertexAttrib3(0, v[face_vertex1][0], v[face_vertex1][1], v[face_vertex1][2]);
+                    // if (face_texcoord2) this.vertexAttrib2(3, vt[face_texcoord2][0], vt[face_texcoord2][1]);
+                    // if (!flatshaded && face_normal2) this.vertexAttrib3(1, vn[face_normal2][0], vn[face_normal2][1], vn[face_normal2][2]);
+                    // this.vertexAttrib3(0, v[face_vertex2][0], v[face_vertex2][1], v[face_vertex2][2]);
+                    // if (face_texcoord3) this.vertexAttrib2(3, vt[face_texcoord3][0], vt[face_texcoord3][1]);
+                    // if (!flatshaded && face_normal3) this.vertexAttrib3(1, vn[face_normal3][0], vn[face_normal3][1], vn[face_normal3][2]);
+                    // this.vertexAttrib3(0, v[face_vertex3][0], v[face_vertex3][1], v[face_vertex3][2]);
+                    // vertexIndexCount += 3;
+                }
+                faces++;
+            }
+            else if (tokens[0] == "usemtl") {
+                usemtl = tokens[1];
+                flushSurface = true;
+            }
+            else if (tokens[0] == "mtllib") {
+                mtllib = tokens[1];
+                flushSurface = true;
+            }
+            else if (tokens[0] == "g") {
+                OBJg = tokens[1];
+                flushSurface = true;
+            }
+            else if (tokens[0] == "s") {
+                OBJs = tokens[1];
+                flushSurface = true;
+            }
+            else if (tokens[0] == "o") {
+                OBJo = tokens[1];
+                flushSurface = true;
+            }
+            else {
+                // what is this?                
+            }
+            if (flushSurface) {
+                flushSurface = false;
+                if (faces !== 0) {
+                    this.EndSurface();
+                    faces = 0;
+                }
+            }
+        }
+        alert("loaded!");
+    }
+    makeArray(tokens, baseIndex = 0) {
+        let x = 0;
+        let y = 0;
+        let z = 0;
+        let w = 1;
+        if (tokens.length > baseIndex) {
+            x = Number(tokens[baseIndex]);
+        }
+        if (tokens.length > baseIndex + 1) {
+            y = Number(tokens[baseIndex + 1]);
+        }
+        if (tokens.length > baseIndex + 2) {
+            z = Number(tokens[baseIndex + 2]);
+        }
+        if (tokens.length > baseIndex + 3) {
+            w = Number(tokens[baseIndex + 3]);
+        }
+        return [x, y, z, w];
+    }
+    makeVector4(tokens, baseIndex = 0) {
+        let x = 0;
+        let y = 0;
+        let z = 0;
+        let w = 1;
+        if (tokens.length > baseIndex) {
+            x = Number(tokens[baseIndex]);
+        }
+        if (tokens.length > baseIndex + 1) {
+            y = Number(tokens[baseIndex + 1]);
+        }
+        if (tokens.length > baseIndex + 2) {
+            z = Number(tokens[baseIndex + 2]);
+        }
+        if (tokens.length > baseIndex + 3) {
+            w = Number(tokens[baseIndex + 3]);
+        }
+        return new Vector4(x, y, z, w);
     }
 }
 /// <reference path="./Fluxions.ts" />
@@ -1279,7 +1569,131 @@ class Texture {
         return new ImageData(pixels, imageW, imageH);
     }
 }
+/// <reference path="./Fluxions.ts" />
+/// <reference path="./RenderConfig.ts" />
+var Utils;
+(function (Utils) {
+    class ShaderLoader {
+        constructor(rc, vertShaderUrl, fragShaderUrl) {
+            this.rc = rc;
+            this.vertShaderUrl = vertShaderUrl;
+            this.fragShaderUrl = fragShaderUrl;
+            this.vertLoaded = false;
+            this.fragLoaded = false;
+            this.vertShaderSource = "";
+            this.fragShaderSource = "";
+            let self = this;
+            let vertAjax = new XMLHttpRequest();
+            vertAjax.addEventListener("load", (e) => {
+                self.vertShaderSource = vertAjax.responseText;
+                self.vertLoaded = true;
+                if (self.vertLoaded && self.fragLoaded) {
+                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+                }
+            });
+            vertAjax.open("GET", vertShaderUrl);
+            vertAjax.send();
+            let fragAjax = new XMLHttpRequest();
+            fragAjax.addEventListener("load", (e) => {
+                self.fragShaderSource = fragAjax.responseText;
+                self.fragLoaded = true;
+                if (self.vertLoaded && self.fragLoaded)
+                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+            });
+            fragAjax.open("GET", fragShaderUrl);
+            fragAjax.send();
+        }
+    }
+    Utils.ShaderLoader = ShaderLoader;
+    class TextFileLoader {
+        constructor(url, callbackfn) {
+            this.callbackfn = callbackfn;
+            this.loaded = false;
+            this.error = false;
+            this.data = "";
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            ajax.addEventListener("load", (e) => {
+                if (!ajax.responseText) {
+                    self.error = true;
+                    self.data = "unknown";
+                }
+                else {
+                    self.data = ajax.responseText;
+                }
+                callbackfn(self.data);
+                self.loaded = true;
+            });
+            ajax.open("GET", url);
+            ajax.send();
+        }
+    }
+    Utils.TextFileLoader = TextFileLoader;
+    class GLTypeInfo {
+        constructor(type, baseType, components, sizeOfType) {
+            this.type = type;
+            this.baseType = baseType;
+            this.components = components;
+            this.sizeOfType = sizeOfType;
+        }
+        CreateArray(size) {
+            switch (this.type) {
+                case WebGLRenderingContext.FLOAT:
+                case WebGLRenderingContext.FLOAT_VEC2:
+                case WebGLRenderingContext.FLOAT_VEC3:
+                case WebGLRenderingContext.FLOAT_VEC4:
+                case WebGLRenderingContext.FLOAT_MAT2:
+                case WebGLRenderingContext.FLOAT_MAT3:
+                case WebGLRenderingContext.FLOAT_MAT4:
+                    return new Float32Array(size);
+                case WebGLRenderingContext.INT:
+                case WebGLRenderingContext.INT_VEC2:
+                case WebGLRenderingContext.INT_VEC3:
+                case WebGLRenderingContext.INT_VEC4:
+                    return new Int32Array(size);
+                case WebGLRenderingContext.SHORT:
+                    return new Int16Array(size);
+                case WebGLRenderingContext.UNSIGNED_INT:
+                    return new Uint32Array(size);
+                case WebGLRenderingContext.UNSIGNED_SHORT:
+                    return new Uint16Array(size);
+                case WebGLRenderingContext.UNSIGNED_BYTE:
+                    return new Uint8ClampedArray(size);
+                case WebGLRenderingContext.BOOL:
+                    return new Uint32Array(size);
+            }
+            return null;
+        }
+    }
+    Utils.WebGLTypeInfo = new Map([
+        [WebGLRenderingContext.BYTE, new GLTypeInfo(WebGLRenderingContext.BYTE, WebGLRenderingContext.BYTE, 1, 1)],
+        [WebGLRenderingContext.UNSIGNED_BYTE, new GLTypeInfo(WebGLRenderingContext.UNSIGNED_BYTE, WebGLRenderingContext.UNSIGNED_BYTE, 1, 1)],
+        [WebGLRenderingContext.SHORT, new GLTypeInfo(WebGLRenderingContext.SHORT, WebGLRenderingContext.SHORT, 1, 2)],
+        [WebGLRenderingContext.UNSIGNED_SHORT, new GLTypeInfo(WebGLRenderingContext.UNSIGNED_SHORT, WebGLRenderingContext.UNSIGNED_SHORT, 1, 2)],
+        [WebGLRenderingContext.INT, new GLTypeInfo(WebGLRenderingContext.INT, WebGLRenderingContext.INT, 1, 4)],
+        [WebGLRenderingContext.UNSIGNED_INT, new GLTypeInfo(WebGLRenderingContext.UNSIGNED_INT, WebGLRenderingContext.UNSIGNED_INT, 1, 4)],
+        [WebGLRenderingContext.BOOL, new GLTypeInfo(WebGLRenderingContext.BOOL, WebGLRenderingContext.INT, 1, 4)],
+        [WebGLRenderingContext.FLOAT, new GLTypeInfo(WebGLRenderingContext.FLOAT, WebGLRenderingContext.FLOAT, 1, 4)],
+        [WebGLRenderingContext.FLOAT_VEC2, new GLTypeInfo(WebGLRenderingContext.FLOAT_VEC2, WebGLRenderingContext.FLOAT, 2, 4)],
+        [WebGLRenderingContext.FLOAT_VEC3, new GLTypeInfo(WebGLRenderingContext.FLOAT_VEC3, WebGLRenderingContext.FLOAT, 3, 4)],
+        [WebGLRenderingContext.FLOAT_VEC4, new GLTypeInfo(WebGLRenderingContext.FLOAT_VEC4, WebGLRenderingContext.FLOAT, 4, 4)],
+        [WebGLRenderingContext.FLOAT_MAT2, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT2, WebGLRenderingContext.FLOAT, 4, 4)],
+        [WebGLRenderingContext.FLOAT_MAT3, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT3, WebGLRenderingContext.FLOAT, 9, 4)],
+        [WebGLRenderingContext.FLOAT_MAT4, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT4, WebGLRenderingContext.FLOAT, 16, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT2x3, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT2x3, WebGLRenderingContext.FLOAT, 6, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT2x4, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT2x4, WebGLRenderingContext.FLOAT, 8, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT3x2, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT3x2, WebGLRenderingContext.FLOAT, 6, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT3x4, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT3x4, WebGLRenderingContext.FLOAT, 12, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT4x2, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT4x2, WebGLRenderingContext.FLOAT, 8, 4)],
+        // [WebGLRenderingContext.FLOAT_MAT4x3, new GLTypeInfo(WebGLRenderingContext.FLOAT_MAT4x3, WebGLRenderingContext.FLOAT, 12, 4)],
+        // [WebGLRenderingContext.SAMPLER_1D, new GLTypeInfo(WebGLRenderingContext.SAMPLER_1D, WebGLRenderingContext.FLOAT, 1, 4)],
+        [WebGLRenderingContext.SAMPLER_2D, new GLTypeInfo(WebGLRenderingContext.SAMPLER_2D, WebGLRenderingContext.FLOAT, 1, 4)],
+        // [WebGLRenderingContext.SAMPLER_3D, new GLTypeInfo(WebGLRenderingContext.SAMPLER_3D, WebGLRenderingContext.FLOAT, 1, 4)],
+        [WebGLRenderingContext.SAMPLER_CUBE, new GLTypeInfo(WebGLRenderingContext.SAMPLER_CUBE, WebGLRenderingContext.FLOAT, 1, 4)],
+    ]);
+})(Utils || (Utils = {}));
 /// <reference path="./Fluxions.ts"/>
+/// <reference path="./Utils.ts" />
 class Property {
     constructor(name, type, values, transposed = false) {
         this.name = name;
@@ -1842,6 +2256,7 @@ void main(void)
         this.geometryMesh.AddIndex(0);
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
+        this.geometryMesh.LoadObject("assets/mitsuba/mitsuba.obj");
         let x = 2.0 * 640 / 384;
         let y = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
@@ -1954,62 +2369,6 @@ void main(void)
     }
 }
 ;
-/// <reference path="./Fluxions.ts" />
-/// <reference path="./RenderConfig.ts" />
-var Utils;
-(function (Utils) {
-    class ShaderLoader {
-        constructor(rc, vertShaderUrl, fragShaderUrl) {
-            this.rc = rc;
-            this.vertShaderUrl = vertShaderUrl;
-            this.fragShaderUrl = fragShaderUrl;
-            this.vertLoaded = false;
-            this.fragLoaded = false;
-            this.vertShaderSource = "";
-            this.fragShaderSource = "";
-            let self = this;
-            let vertAjax = new XMLHttpRequest();
-            vertAjax.addEventListener("load", (e) => {
-                self.vertShaderSource = vertAjax.responseText;
-                self.vertLoaded = true;
-                if (self.vertLoaded && self.fragLoaded) {
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
-                }
-            });
-            vertAjax.open("GET", vertShaderUrl);
-            vertAjax.send();
-            let fragAjax = new XMLHttpRequest();
-            fragAjax.addEventListener("load", (e) => {
-                self.fragShaderSource = fragAjax.responseText;
-                self.fragLoaded = true;
-                if (self.vertLoaded && self.fragLoaded)
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
-            });
-            fragAjax.open("GET", fragShaderUrl);
-            fragAjax.send();
-        }
-    }
-    Utils.ShaderLoader = ShaderLoader;
-    class TextFileLoader {
-        constructor(url) {
-            this.loaded = false;
-            this.error = false;
-            this.data = "";
-            let self = this;
-            let ajax = new XMLHttpRequest();
-            ajax.addEventListener("load", (e) => {
-                if (!ajax.responseText)
-                    self.error = true;
-                else
-                    self.data = ajax.responseText;
-                self.loaded = true;
-            });
-            ajax.open("GET", url);
-            ajax.send();
-        }
-    }
-    Utils.TextFileLoader = TextFileLoader;
-})(Utils || (Utils = {}));
 /// <reference path="Vector2.ts" />
 /// <reference path="Vector3.ts" />
 /// <reference path="Vector4.ts" />
