@@ -74,7 +74,7 @@ void main(void)
 
     constructor() { }
 
-    test(gl: WebGLRenderingContext): boolean {
+    test(gl: WebGLRenderingContext, timeInSeconds: number): boolean {
         if (!this.initShaders(gl)) {
             this.kill(gl);
             return false;
@@ -83,7 +83,7 @@ void main(void)
             this.kill(gl);
             return false;
         }
-        if (!this.drawScene(gl)) {
+        if (!this.drawScene(gl, timeInSeconds)) {
             this.kill(gl);
             return false;
         }
@@ -203,7 +203,7 @@ void main(void)
         return true;
     }
 
-    drawScene(gl: WebGLRenderingContext): boolean {
+    drawScene(gl: WebGLRenderingContext, timeInSeconds: number): boolean {
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);

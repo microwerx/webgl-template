@@ -916,7 +916,7 @@ class IndexedGeometryMesh {
         ];
         this._vbo = _context.gl.createBuffer();
         this._ibo = _context.gl.createBuffer();
-        this._vertices = new Float32Array(this._maxVertices);
+        this._vertices = new Float32Array(this._maxVertices * 8 * 4);
         if (_maxIndices < 32768) {
             this._indices = new Uint16Array(_maxIndices);
             this._isUint32 = false;
@@ -954,7 +954,7 @@ class IndexedGeometryMesh {
         return true;
     }
     Reset() {
-        this._vertices = new Float32Array(this._maxVertices);
+        this._vertices = new Float32Array(this._maxVertices * 8 * 4);
         if (this._maxIndices < 32768) {
             this._indices = new Uint16Array(this._maxIndices);
             this._isUint32 = false;
@@ -994,7 +994,9 @@ class IndexedGeometryMesh {
             if (this._attribInfo[i].location < 0)
                 continue;
             gl.enableVertexAttribArray(this._attribInfo[i].location);
-            gl.vertexAttribPointer(this._attribInfo[i].location, 4, gl.FLOAT, false, 8 * 4 * 4, i * 4 * 4);
+            let stride = 8 * 4 * 4;
+            let offset = i * 4 * 4;
+            gl.vertexAttribPointer(this._attribInfo[i].location, 4, gl.FLOAT, false, stride, offset);
         }
         let useMaterials = materialName !== undefined;
         let type = this._isUint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
@@ -1205,7 +1207,7 @@ class IndexedGeometryMesh {
                         else if (texcoordIndex > 0)
                             texcoordIndex--;
                     }
-                    var vertex = [vertexIndex, normalIndex, texcoordIndex];
+                    let vertex = [vertexIndex, normalIndex, texcoordIndex];
                     faceIndices.push(vertex);
                 }
                 if (faces === 0) {
@@ -1260,11 +1262,18 @@ class IndexedGeometryMesh {
                     for (let vindex = 0; vindex < 3; vindex++) {
                         for (let arrayIndex = 7; arrayIndex >= 0; arrayIndex--) {
                             if (arrays_enabled[arrayIndex]) {
-                                let x = arrays[arrayIndex][indices[arrayIndex][vindex]][0];
-                                let y = arrays[arrayIndex][indices[arrayIndex][vindex]][1];
-                                let z = arrays[arrayIndex][indices[arrayIndex][vindex]][2];
-                                let w = arrays[arrayIndex][indices[arrayIndex][vindex]][3];
-                                this.VertexAttrib4(arrayIndex, x, y, z, w);
+                                let i = indices[arrayIndex][vindex];
+                                if (i >= 0 && i < arrays[arrayIndex].length) {
+                                    let x = arrays[arrayIndex][i][0];
+                                    let y = arrays[arrayIndex][i][1];
+                                    let z = arrays[arrayIndex][i][2];
+                                    let w = arrays[arrayIndex][i][3];
+                                    this.VertexAttrib4(arrayIndex, x, y, z, w);
+                                }
+                                else {
+                                    console.error("index less than zero!");
+                                    this.VertexAttrib4(arrayIndex, 0, 0, 0, 0);
+                                }
                             }
                         }
                     }
@@ -1316,7 +1325,7 @@ class IndexedGeometryMesh {
                 }
             }
         }
-        alert("loaded!");
+        console.info("Loaded OBJ file with " + this._vertexCount.toString(10) + "/" + this._indexCount.toString(10) + " vertices/indices");
     }
     makeArray(tokens, baseIndex = 0) {
         let x = 0;
@@ -1975,7 +1984,7 @@ void main(void)
 }
         `;
     }
-    test(gl) {
+    test(gl, timeInSeconds) {
         if (!this.initShaders(gl)) {
             this.kill(gl);
             return false;
@@ -1984,7 +1993,7 @@ void main(void)
             this.kill(gl);
             return false;
         }
-        if (!this.drawScene(gl)) {
+        if (!this.drawScene(gl, timeInSeconds)) {
             this.kill(gl);
             return false;
         }
@@ -2092,7 +2101,7 @@ void main(void)
         }
         return true;
     }
-    drawScene(gl) {
+    drawScene(gl, timeInSeconds) {
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
@@ -2144,8 +2153,7 @@ class WebGLTest2 {
         this.textureCM = null;
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
-        this.Object1Matrix = Matrix4.makeTranslation(-.2, 0, 0);
-        this.Object2Matrix = Matrix4.makeTranslation(.2, 0, 0);
+        this.Object1Matrix = Matrix4.makeTranslation(0, 0, 0);
         this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
@@ -2201,7 +2209,7 @@ void main(void)
 }
         `;
     }
-    test(gl) {
+    test(gl, timeInSeconds) {
         if (!this.fluxions) {
             this.fluxions = new Fluxions(gl);
             if (!this.initShaders(gl)) {
@@ -2213,7 +2221,7 @@ void main(void)
                 return false;
             }
         }
-        if (!this.drawScene(gl)) {
+        if (!this.drawScene(gl, timeInSeconds)) {
             this.kill(gl);
             return false;
         }
@@ -2235,13 +2243,379 @@ void main(void)
         if (this.fluxions) {
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
             this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
         }
         return true;
     }
     initBuffers(gl) {
         if (!this.fluxions)
             return false;
-        this.geometryMesh = new IndexedGeometryMesh(this.fluxions);
+        this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(-1);
+        // this.geometryMesh.AddIndex(-1);
+        // this.geometryMesh.AddIndex(-1);
+        let x = 2.0 * 640 / 384;
+        let y = 2.0;
+        this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, -x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, x, -y);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, -x, -y);
+        this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing buffers");
+            return false;
+        }
+        const cubeColorsLight = [
+            Colors.LightRed,
+            Colors.LightCyan,
+            Colors.LightGreen,
+            Colors.LightMagenta,
+            Colors.LightBlue,
+            Colors.LightYellow
+        ];
+        const cubeColorsDark = [
+            Colors.DarkRed,
+            Colors.DarkCyan,
+            Colors.DarkGreen,
+            Colors.DarkMagenta,
+            Colors.DarkBlue,
+            Colors.DarkYellow
+        ];
+        this.texture2D = gl.createTexture();
+        this.textureCM = gl.createTexture();
+        if (!this.texture2D || !this.textureCM)
+            return false;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, Colors.Blue, Colors.Yellow));
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        for (let i = 0; i < 6; i++) {
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, cubeColorsDark[i], cubeColorsLight[i]));
+        }
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing textures");
+            return false;
+        }
+        return true;
+    }
+    drawScene(gl, timeInSeconds) {
+        if (!this.renderConfig)
+            return false;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.enable(gl.DEPTH_TEST);
+        this.renderConfig.Use();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        let loc;
+        if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("LightDir")) {
+            gl.uniform3fv(loc, new Vector3(0.25, 0.25, 1.0).toFloat32Array());
+        }
+        if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
+            let aspect = gl.canvas.width / gl.canvas.height;
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
+            gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("Texture2D")) {
+            gl.uniform1i(loc, 0);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCube")) {
+            gl.uniform1i(loc, 1);
+        }
+        let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
+        if (wmloc) {
+            let matRotate = Matrix4.multiply(this.Object1Matrix, Matrix4.makeRotation(5 * timeInSeconds, 0, 1, 0));
+            let matrix = matRotate.asColMajorArray();
+            gl.uniformMatrix4fv(wmloc, false, matrix);
+        }
+        if (this.geometryMesh && this.renderConfig) {
+            this.geometryMesh.Render(this.renderConfig);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.useProgram(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.disable(gl.DEPTH_TEST);
+        return true;
+    }
+}
+;
+/// <reference path="Vector2.ts" />
+/// <reference path="Vector3.ts" />
+/// <reference path="Vector4.ts" />
+/// <reference path="Matrix2.ts" />
+/// <reference path="Matrix3.ts" />
+/// <reference path="Matrix4.ts" />
+/// <reference path="Colors.ts" />
+/// <reference path="RenderConfig.ts" />
+/// <reference path="IndexedGeometryMesh.ts" />
+/// <reference path="Texture.ts" />
+/// <reference path="MaterialLibrary.ts" />
+/// <reference path="WebGLTest1.ts" />
+/// <reference path="WebGLTest2.ts" />
+/// <reference path="Utils.ts" />
+class Fluxions {
+    constructor(gl) {
+        this.gl = gl;
+        this.testWebGL1 = new WebGLTest1();
+        this.testWebGL2 = new WebGLTest2();
+    }
+    CreateRenderConfig(vertShaderText, fragShaderText) {
+        return new RenderConfig(this, vertShaderText, fragShaderText);
+    }
+    CreateIndexGeometryMesh() {
+        return new IndexedGeometryMesh(this);
+    }
+}
+/// <reference path="./fluxions-webgl/Fluxions.ts"/>
+var WebGLTemplate;
+(function (WebGLTemplate) {
+    class Context {
+        constructor() {
+            this.parentElement = null;
+            this.canvasElement = null;
+            this.renderingContext = null;
+            this.experimentalContext = false;
+            this.initialized = false;
+            this.enabledExtensions = [];
+            this._hasStandardDerivatives = false;
+            this._hasDepthTexture = false;
+            this._hasTextureFloat = false;
+            this._hasElementIndexUint = false;
+        }
+        get hasStandardDerivatives() {
+            return this._hasStandardDerivatives;
+        }
+        get hasDepthTexture() {
+            return this._hasDepthTexture;
+        }
+        get hasTextureFloat() {
+            return this._hasTextureFloat;
+        }
+        get hasElementIndexUint() {
+            return this._hasElementIndexUint;
+        }
+        get hasExpectedExtensions() {
+            return this._hasDepthTexture && this._hasElementIndexUint && this._hasStandardDerivatives && this._hasTextureFloat;
+        }
+        get gl() {
+            return this.renderingContext;
+        }
+        HasExtensions(names) {
+            if (!this.renderingContext)
+                return false;
+            let supportedExtensions = this.renderingContext.getSupportedExtensions();
+            if (!supportedExtensions)
+                return false;
+            let allFound = true;
+            for (var name of names) {
+                let found = false;
+                for (var ext of supportedExtensions) {
+                    if (name == ext) {
+                        this.enabledExtensions.push(this.renderingContext.getExtension(name));
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    allFound = false;
+                    break;
+                }
+            }
+            return allFound;
+        }
+        ClearScreen(r, g, b) {
+            if (!this.gl)
+                return;
+            this.gl.clearColor(r, g, b, 1.0);
+            this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+        }
+        static CreateContext(width = 512, height = 512, parentElement) {
+            let ctx = new Context();
+            ctx.canvasElement = document.createElement("canvas");
+            if (!ctx.canvasElement)
+                return null;
+            ctx.canvasElement.width = width;
+            ctx.canvasElement.height = height;
+            if (parentElement)
+                ctx.parentElement = parentElement;
+            else
+                ctx.parentElement = document.body;
+            ctx.parentElement.appendChild(ctx.canvasElement);
+            // Create rendering context, experimental if necessary
+            ctx.renderingContext = ctx.canvasElement.getContext("webgl");
+            if (!ctx.renderingContext) {
+                ctx.renderingContext = ctx.canvasElement.getContext("experimental-webgl");
+                ctx.experimentalContext = true;
+            }
+            if (!ctx.renderingContext) {
+                return null;
+            }
+            // determine some essential extensions
+            if (ctx.HasExtensions([
+                "OES_standard_derivatives",
+                "WEBGL_depth_texture",
+                "OES_texture_float",
+                "OES_element_index_uint"
+            ])) {
+                ctx._hasStandardDerivatives = true;
+                ctx._hasDepthTexture = true;
+                ctx._hasTextureFloat = true;
+                ctx._hasElementIndexUint = true;
+            }
+            return ctx;
+        }
+    }
+    WebGLTemplate.Context = Context;
+})(WebGLTemplate || (WebGLTemplate = {}));
+/// <reference path="Fluxions.ts" />
+/// <reference path="Colors.ts" />
+/// <reference path="IndexedGeometryMesh.ts" />
+class WebGLTest3 {
+    constructor() {
+        // New properties
+        this.fluxions = null;
+        this.renderConfig = null;
+        this.geometryMesh = null;
+        this.initialized = false;
+        this.shaderLoader = null;
+        // Original properties
+        this.texture2D = null;
+        this.textureCM = null;
+        this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
+        this.WorldMatrix = Matrix4.makeIdentity();
+        this.Object1Matrix = Matrix4.makeTranslation(0, -0.5, 0);
+        this.Object2Matrix = Matrix4.makeTranslation(.2, 0, -5);
+        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.vertShaderSource = `
+uniform mat4 WorldMatrix;
+uniform mat4 CameraMatrix;
+uniform mat4 ProjectionMatrix;
+
+attribute vec4 aPosition;
+attribute vec3 aNormal;
+attribute vec4 aColor;
+attribute vec4 aTexCoord;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    VS_Position = WorldMatrix * aPosition;
+    VS_CameraDir = CameraMatrix[3].xyz - VS_Position.xyz;
+    VS_Normal = aNormal;
+    VS_Color = aColor;
+    VS_TexCoord = aTexCoord;
+    gl_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+}
+        `;
+        this.fragShaderSource = `
+precision mediump float;
+
+uniform float timer;
+uniform vec2  mouse;
+uniform vec3  LightDir;
+
+uniform sampler2D Texture2D;
+uniform samplerCube TextureCube;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    vec3 V = normalize(VS_CameraDir);
+    vec3 L = normalize (LightDir);
+    vec3 N = normalize (VS_Normal);
+    float NdotL = max(0.0, dot(N, L));
+    gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = textureCube(TextureCube, vec3(-1.0, VS_TexCoord.s, VS_TexCoord.t));
+    gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
+}
+        `;
+    }
+    test(gl, timeInSeconds) {
+        if (!this.fluxions) {
+            this.fluxions = new Fluxions(gl);
+            if (!this.initShaders(gl)) {
+                this.kill(gl);
+                return false;
+            }
+            if (!this.initBuffers(gl)) {
+                this.kill(gl);
+                return false;
+            }
+        }
+        if (!this.drawScene(gl, timeInSeconds)) {
+            this.kill(gl);
+            return false;
+        }
+        //this.kill(gl);
+        return true;
+    }
+    kill(gl) {
+        if (this.texture2D) {
+            gl.deleteTexture(this.texture2D);
+            this.texture2D = null;
+        }
+        if (this.textureCM) {
+            gl.deleteTexture(this.textureCM);
+            this.textureCM = null;
+        }
+        this.fluxions = null;
+    }
+    initShaders(gl) {
+        if (this.fluxions) {
+            this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
+            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
+        }
+        return true;
+    }
+    initBuffers(gl) {
+        if (!this.fluxions)
+            return false;
+        this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
         this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
         this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
         this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
@@ -2256,7 +2630,7 @@ void main(void)
         this.geometryMesh.AddIndex(0);
         this.geometryMesh.AddIndex(1);
         this.geometryMesh.AddIndex(2);
-        this.geometryMesh.LoadObject("assets/mitsuba/mitsuba.obj");
+        this.geometryMesh.LoadObject("assets/teapot.obj");
         let x = 2.0 * 640 / 384;
         let y = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
@@ -2314,10 +2688,11 @@ void main(void)
         }
         return true;
     }
-    drawScene(gl) {
+    drawScene(gl, timeInSeconds) {
         if (!this.renderConfig)
             return false;
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.enable(gl.DEPTH_TEST);
         this.renderConfig.Use();
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
@@ -2344,14 +2719,8 @@ void main(void)
         }
         let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
         if (wmloc) {
-            let matrix = this.Object1Matrix.asColMajorArray();
-            gl.uniformMatrix4fv(wmloc, false, matrix);
-        }
-        if (this.geometryMesh && this.renderConfig) {
-            this.geometryMesh.Render(this.renderConfig);
-        }
-        if (wmloc) {
-            let matrix = this.Object2Matrix.asColMajorArray();
+            let matRotate = Matrix4.multiply(this.Object1Matrix, Matrix4.makeRotation(5 * timeInSeconds, 0, 1, 0));
+            let matrix = matRotate.asColMajorArray();
             gl.uniformMatrix4fv(wmloc, false, matrix);
         }
         if (this.geometryMesh && this.renderConfig) {
@@ -2365,133 +2734,8 @@ void main(void)
         gl.useProgram(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.disable(gl.DEPTH_TEST);
         return true;
     }
 }
 ;
-/// <reference path="Vector2.ts" />
-/// <reference path="Vector3.ts" />
-/// <reference path="Vector4.ts" />
-/// <reference path="Matrix2.ts" />
-/// <reference path="Matrix3.ts" />
-/// <reference path="Matrix4.ts" />
-/// <reference path="Colors.ts" />
-/// <reference path="RenderConfig.ts" />
-/// <reference path="IndexedGeometryMesh.ts" />
-/// <reference path="Texture.ts" />
-/// <reference path="MaterialLibrary.ts" />
-/// <reference path="WebGLTest1.ts" />
-/// <reference path="WebGLTest2.ts" />
-/// <reference path="Utils.ts" />
-class Fluxions {
-    constructor(gl) {
-        this.gl = gl;
-        this.testWebGL1 = new WebGLTest1();
-        this.testWebGL2 = new WebGLTest2();
-    }
-    CreateRenderConfig(vertShaderText, fragShaderText) {
-        return new RenderConfig(this, vertShaderText, fragShaderText);
-    }
-    CreateIndexGeometryMesh() {
-        return new IndexedGeometryMesh(this);
-    }
-}
-/// <reference path="./fluxions-webgl/Fluxions.ts"/>
-var WebGLTemplate;
-(function (WebGLTemplate) {
-    class Context {
-        constructor() {
-            this.parentElement = null;
-            this.canvasElement = null;
-            this.renderingContext = null;
-            this.experimentalContext = false;
-            this.initialized = false;
-            this._hasStandardDerivatives = false;
-            this._hasDepthTexture = false;
-            this._hasTextureFloat = false;
-            this._hasElementIndexUint = false;
-        }
-        get hasStandardDerivatives() {
-            return this._hasStandardDerivatives;
-        }
-        get hasDepthTexture() {
-            return this._hasDepthTexture;
-        }
-        get hasTextureFloat() {
-            return this._hasTextureFloat;
-        }
-        get hasElementIndexUint() {
-            return this._hasElementIndexUint;
-        }
-        get hasExpectedExtensions() {
-            return this._hasDepthTexture && this._hasElementIndexUint && this._hasStandardDerivatives && this._hasTextureFloat;
-        }
-        get gl() {
-            return this.renderingContext;
-        }
-        HasExtensions(names) {
-            if (!this.renderingContext)
-                return false;
-            let supportedExtensions = this.renderingContext.getSupportedExtensions();
-            if (!supportedExtensions)
-                return false;
-            let allFound = true;
-            for (var name of names) {
-                let found = false;
-                for (var ext of supportedExtensions) {
-                    if (name == ext) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    allFound = false;
-                    break;
-                }
-            }
-            return allFound;
-        }
-        ClearScreen(r, g, b) {
-            if (!this.gl)
-                return;
-            this.gl.clearColor(r, g, b, 1.0);
-            this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-        }
-        static CreateContext(width = 512, height = 512, parentElement) {
-            let ctx = new Context();
-            ctx.canvasElement = document.createElement("canvas");
-            if (!ctx.canvasElement)
-                return null;
-            ctx.canvasElement.width = width;
-            ctx.canvasElement.height = height;
-            if (parentElement)
-                ctx.parentElement = parentElement;
-            else
-                ctx.parentElement = document.body;
-            ctx.parentElement.appendChild(ctx.canvasElement);
-            // Create rendering context, experimental if necessary
-            ctx.renderingContext = ctx.canvasElement.getContext("webgl");
-            if (!ctx.renderingContext) {
-                ctx.renderingContext = ctx.canvasElement.getContext("experimental-webgl");
-                ctx.experimentalContext = true;
-            }
-            if (!ctx.renderingContext) {
-                return null;
-            }
-            // determine some essential extensions
-            if (ctx.HasExtensions([
-                "OES_standard_derivatives",
-                "WEBGL_depth_texture",
-                "OES_texture_float",
-                "OES_element_index_uint"
-            ])) {
-                ctx._hasStandardDerivatives = true;
-                ctx._hasDepthTexture = true;
-                ctx._hasTextureFloat = true;
-                ctx._hasElementIndexUint = true;
-            }
-            return ctx;
-        }
-    }
-    WebGLTemplate.Context = Context;
-})(WebGLTemplate || (WebGLTemplate = {}));

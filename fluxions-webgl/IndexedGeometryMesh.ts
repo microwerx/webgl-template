@@ -96,7 +96,7 @@ class IndexedGeometryMesh {
     constructor(private _context: Fluxions, private _maxVertices: number = 32767, private _maxIndices: number = 32767) {
         this._vbo = _context.gl.createBuffer();
         this._ibo = _context.gl.createBuffer();
-        this._vertices = new Float32Array(this._maxVertices);
+        this._vertices = new Float32Array(this._maxVertices * 8 * 4);
         if (_maxIndices < 32768) {
             this._indices = new Uint16Array(_maxIndices);
             this._isUint32 = false;
@@ -132,7 +132,7 @@ class IndexedGeometryMesh {
     }
 
     Reset(): void {
-        this._vertices = new Float32Array(this._maxVertices);
+        this._vertices = new Float32Array(this._maxVertices * 8 * 4);
         if (this._maxIndices < 32768) {
             this._indices = new Uint16Array(this._maxIndices);
             this._isUint32 = false;
@@ -174,7 +174,9 @@ class IndexedGeometryMesh {
             this._attribInfo[i].location = rc.GetAttribLocation(this._attribInfo[i].attribName);
             if (this._attribInfo[i].location < 0) continue;
             gl.enableVertexAttribArray(this._attribInfo[i].location);
-            gl.vertexAttribPointer(this._attribInfo[i].location, 4, gl.FLOAT, false, 8 * 4 * 4, i * 4 * 4);
+            let stride: number = 8 * 4 * 4;
+            let offset: number = i * 4 * 4;
+            gl.vertexAttribPointer(this._attribInfo[i].location, 4, gl.FLOAT, false, stride, offset);
         }
 
         let useMaterials = materialName !== undefined;
@@ -392,7 +394,7 @@ class IndexedGeometryMesh {
                         else if (texcoordIndex > 0)
                             texcoordIndex--;
                     }
-                    var vertex = [vertexIndex, normalIndex, texcoordIndex];
+                    let vertex = [vertexIndex, normalIndex, texcoordIndex];
                     faceIndices.push(vertex);
                 }
 
@@ -457,11 +459,18 @@ class IndexedGeometryMesh {
                     for (let vindex = 0; vindex < 3; vindex++) {
                         for (let arrayIndex = 7; arrayIndex >= 0; arrayIndex--) {
                             if (arrays_enabled[arrayIndex]) {
-                                let x: number = arrays[arrayIndex][indices[arrayIndex][vindex]][0];
-                                let y: number = arrays[arrayIndex][indices[arrayIndex][vindex]][1];
-                                let z: number = arrays[arrayIndex][indices[arrayIndex][vindex]][2];
-                                let w: number = arrays[arrayIndex][indices[arrayIndex][vindex]][3];
-                                this.VertexAttrib4(arrayIndex, x, y, z, w);
+                                let i = indices[arrayIndex][vindex];
+                                if (i >= 0 && i < arrays[arrayIndex].length) {
+                                    let x: number = arrays[arrayIndex][i][0];
+                                    let y: number = arrays[arrayIndex][i][1];
+                                    let z: number = arrays[arrayIndex][i][2];
+                                    let w: number = arrays[arrayIndex][i][3];
+                                    this.VertexAttrib4(arrayIndex, x, y, z, w);
+                                }
+                                else {
+                                    console.error("index less than zero!");
+                                    this.VertexAttrib4(arrayIndex, 0, 0, 0, 0);
+                                }
                             }
                         }
                     }
@@ -521,7 +530,7 @@ class IndexedGeometryMesh {
             }
         }
 
-        alert("loaded!");
+        console.info("Loaded OBJ file with " + this._vertexCount.toString(10) + "/" + this._indexCount.toString(10) + " vertices/indices");
     }
 
     private makeArray(tokens: RegExpMatchArray, baseIndex: number = 0): number[] {

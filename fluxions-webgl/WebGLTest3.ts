@@ -2,7 +2,7 @@
 /// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
 
-class WebGLTest2 {
+class WebGLTest3 {
     // New properties
     fluxions: Fluxions | null = null;
     renderConfig: RenderConfig | null = null;
@@ -16,7 +16,8 @@ class WebGLTest2 {
 
     CameraMatrix: Matrix4 = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
     WorldMatrix: Matrix4 = Matrix4.makeIdentity();
-    Object1Matrix: Matrix4 = Matrix4.makeTranslation(0, 0, 0);
+    Object1Matrix: Matrix4 = Matrix4.makeTranslation(0, -0.5, 0);
+    Object2Matrix: Matrix4 = Matrix4.makeTranslation(.2, 0, -5);
     ProjectionMatrix: Matrix4 = Matrix4.makePerspective(45, 1, 0.1, 100.0);
 
     private readonly vertShaderSource: string = `
@@ -112,8 +113,8 @@ void main(void)
     initShaders(gl: WebGLRenderingContext): boolean {
         if (this.fluxions) {
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
-            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
+            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
         }
 
         return true;
@@ -123,23 +124,25 @@ void main(void)
         if (!this.fluxions)
             return false;
         this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
-        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
 
-        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
-        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
-        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
 
-        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
-        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
-        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
 
-        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
-        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
-        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
-        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
-        // this.geometryMesh.AddIndex(-1);
-        // this.geometryMesh.AddIndex(-1);
-        // this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        this.geometryMesh.AddIndex(0);
+        this.geometryMesh.AddIndex(1);
+        this.geometryMesh.AddIndex(2);
+
+        this.geometryMesh.LoadObject("assets/teapot.obj");
 
         let x: number = 2.0 * 640 / 384;
         let y: number = 2.0;
@@ -154,10 +157,10 @@ void main(void)
         this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
         this.geometryMesh.VertexAttrib2(0, -x, -y);
         this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
-        this.geometryMesh.AddIndex(-1);
-        this.geometryMesh.AddIndex(-1);
-        this.geometryMesh.AddIndex(-1);
-        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(3);
+        this.geometryMesh.AddIndex(4);
+        this.geometryMesh.AddIndex(5);
+        this.geometryMesh.AddIndex(6);
 
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");

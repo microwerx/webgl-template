@@ -25,8 +25,8 @@
                 this.mouseX = 0;
                 this.mouseY = 0;
                 this.fluxions = null;
-                this.webglTest1 = null;
-                this.webglTest2 = null;
+                this.webglTest = null;
+                this.webglTestNum = 3;
             }
 
             init() {
@@ -86,7 +86,20 @@
             }
 
             OnInit() {
-                this.webglTest2 = new WebGLTest2(this.context.gl);
+                switch (this.webglTestNum) {
+                    case 1:
+                        this.webglTest = new WebGLTest1(this.context.gl);
+                        break;
+                    case 2:
+                        this.webglTest = new WebGLTest2(this.context.gl);
+                        break;
+                    case 3:
+                        this.webglTest = new WebGLTest3(this.context.gl);
+                        break;
+                    default:
+                        this.webglTest = new WebGLTest2(this.context.gl);
+                        break;
+                }
             }
 
             OnUpdate(elapsedTime) {
@@ -98,7 +111,7 @@
                 let gl = this.context.gl;
                 let timer = this.timer;
                 context.ClearScreen(0.8 + 0.2 * Math.sin(Math.PI * timer), 0.4, 0.8);
-                this.webglTest2.test(gl);
+                this.webglTest.test(gl, timer);
             }
         }
 

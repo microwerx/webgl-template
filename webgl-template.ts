@@ -7,6 +7,7 @@ namespace WebGLTemplate {
         public renderingContext: WebGLRenderingContext | null = null;
         public experimentalContext: boolean = false;
         private initialized: boolean = false;
+        private enabledExtensions: any[] = [];
 
         private _hasStandardDerivatives = false;
         private _hasDepthTexture = false;
@@ -46,6 +47,7 @@ namespace WebGLTemplate {
                 let found = false;
                 for (var ext of supportedExtensions) {
                     if (name == ext) {
+                        this.enabledExtensions.push(this.renderingContext.getExtension(name));
                         found = true;
                         break;
                     }
