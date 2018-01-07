@@ -1,2 +1,7 @@
 *.pdf
-assets
+*.obj
+!assets/teapot.obj
+assets/cube
+assets/dabrovic_sponza
+assets/mitsuba
+assets/Cornell*
