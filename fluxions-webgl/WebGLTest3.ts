@@ -13,12 +13,14 @@ class WebGLTest3 {
     // Original properties
     texture2D: WebGLTexture | null = null;
     textureCM: WebGLTexture | null = null;
+    textureCubePerlin: WebGLTexture | null = null;
+    texturePerlin: WebGLTexture | null = null;
 
     CameraMatrix: Matrix4 = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
     WorldMatrix: Matrix4 = Matrix4.makeIdentity();
     Object1Matrix: Matrix4 = Matrix4.makeTranslation(0, -0.5, 0);
     Object2Matrix: Matrix4 = Matrix4.makeTranslation(.2, 0, -5);
-    ProjectionMatrix: Matrix4 = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+    ProjectionMatrix: Matrix4 = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
 
     private readonly vertShaderSource: string = `
 uniform mat4 WorldMatrix;
@@ -107,6 +109,14 @@ void main(void)
             gl.deleteTexture(this.textureCM);
             this.textureCM = null;
         }
+        if (this.textureCubePerlin) {
+            gl.deleteTexture(this.textureCubePerlin);
+            this.textureCubePerlin = null;
+        }
+        if (this.texturePerlin) {
+            gl.deleteTexture(this.texturePerlin);
+            this.texturePerlin = null;
+        }
         this.fluxions = null;
     }
 
@@ -124,27 +134,27 @@ void main(void)
         if (!this.fluxions)
             return false;
         this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
-        this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
 
-        this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
-        this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
 
-        this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
-        this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
 
-        this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
-        this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
-        this.geometryMesh.BeginSurface(gl.TRIANGLES);
-        this.geometryMesh.AddIndex(0);
-        this.geometryMesh.AddIndex(1);
-        this.geometryMesh.AddIndex(2);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(0);
+        // this.geometryMesh.AddIndex(1);
+        // this.geometryMesh.AddIndex(2);
 
         this.geometryMesh.LoadObject("assets/teapot.obj");
 
-        let x: number = 2.0 * 640 / 384;
+        let x: number = 2.0;// * 640 / 384;
         let y: number = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
         this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
@@ -157,10 +167,10 @@ void main(void)
         this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
         this.geometryMesh.VertexAttrib2(0, -x, -y);
         this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
-        this.geometryMesh.AddIndex(3);
-        this.geometryMesh.AddIndex(4);
-        this.geometryMesh.AddIndex(5);
-        this.geometryMesh.AddIndex(6);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
 
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
@@ -199,6 +209,26 @@ void main(void)
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 
+        this.textureCubePerlin = gl.createTexture();
+        if (this.textureCubePerlin) {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+            for (let i = 0; i < 6; i++) {
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(128, i, cubeColorsDark[i], cubeColorsLight[i]));
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+
+        this.texturePerlin = gl.createTexture();
+        if (this.texturePerlin) {
+            gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(32, 4, Colors.Blue, Colors.Green));
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");
             return false;
@@ -219,9 +249,17 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
 
         let loc: any;
         if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            // this.CameraMatrix.LoadIdentity();
+            // this.CameraMatrix.Translate(0.0, 0.0, 5.0);
+            // this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 0.0, 1.0, 0.0);
+            // this.CameraMatrix.Rotate(timeInSeconds, 1.0, 0.0, 0.0);
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
         }
 
@@ -231,7 +269,7 @@ void main(void)
 
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect: number = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
@@ -242,6 +280,14 @@ void main(void)
 
         if (loc = this.renderConfig.uniforms.get("TextureCube")) {
             gl.uniform1i(loc, 1);
+        }
+
+        if (loc = this.renderConfig.uniforms.get("TextureCubePerlin")) {
+            gl.uniform1i(loc, 2);
+        }
+
+        if (loc = this.renderConfig.uniforms.get("TexturePerlin")) {
+            gl.uniform1i(loc, 3);
         }
 
         let wmloc = this.renderConfig.uniforms.get("WorldMatrix")
@@ -258,6 +304,10 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE0);
         gl.useProgram(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);

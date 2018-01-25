@@ -17,7 +17,7 @@ class WebGLTest2 {
     CameraMatrix: Matrix4 = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
     WorldMatrix: Matrix4 = Matrix4.makeIdentity();
     Object1Matrix: Matrix4 = Matrix4.makeTranslation(0, 0, 0);
-    ProjectionMatrix: Matrix4 = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+    ProjectionMatrix: Matrix4 = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
 
     private readonly vertShaderSource: string = `
 uniform mat4 WorldMatrix;
@@ -228,7 +228,7 @@ void main(void)
 
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect: number = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }

@@ -449,6 +449,83 @@ class Matrix4 {
         this.m34 = m34;
         this.m44 = m44;
     }
+    copy(m) {
+        return this.LoadMatrix(m);
+    }
+    LoadRowMajor(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44) {
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m14 = m14;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m24 = m24;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        this.m34 = m34;
+        this.m41 = m41;
+        this.m42 = m42;
+        this.m43 = m43;
+        this.m44 = m44;
+        return this;
+    }
+    LoadColMajor(m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44) {
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m14 = m14;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m24 = m24;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        this.m34 = m34;
+        this.m41 = m41;
+        this.m42 = m42;
+        this.m43 = m43;
+        this.m44 = m44;
+        return this;
+    }
+    LoadIdentity() {
+        return this.LoadMatrix(Matrix4.makeIdentity());
+    }
+    Translate(x, y, z) {
+        return this.MultMatrix(Matrix4.makeTranslation(x, y, z));
+    }
+    Rotate(angleInDegrees, x, y, z) {
+        return this.MultMatrix(Matrix4.makeRotation(angleInDegrees, x, y, z));
+    }
+    Scale(sx, sy, sz) {
+        return this.MultMatrix(Matrix4.makeScale(sx, sy, sz));
+    }
+    LookAt(eye, center, up) {
+        return this.MultMatrix(Matrix4.makeLookAt(eye, center, up));
+    }
+    Frustum(left, right, bottom, top, near, far) {
+        return this.MultMatrix(Matrix4.makeFrustum(left, right, bottom, top, near, far));
+    }
+    Ortho(left, right, bottom, top, near, far) {
+        return this.MultMatrix(Matrix4.makeOrtho(left, right, bottom, top, near, far));
+    }
+    Ortho2D(left, right, bottom, top) {
+        return this.MultMatrix(Matrix4.makeOrtho2D(left, right, bottom, top));
+    }
+    PerspectiveX(fovx, aspect, near, far) {
+        return this.MultMatrix(Matrix4.makePerspectiveX(fovx, aspect, near, far));
+    }
+    PerspectiveY(fovy, aspect, near, far) {
+        return this.MultMatrix(Matrix4.makePerspectiveY(fovy, aspect, near, far));
+    }
+    ShadowBias() {
+        return this.MultMatrix(Matrix4.makeShadowBias());
+    }
+    CubeFaceMatrix(face) {
+        return this.MultMatrix(Matrix4.makeCubeFaceMatrix(face));
+    }
     static makeIdentity() {
         return new Matrix4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     }
@@ -502,11 +579,11 @@ class Matrix4 {
         var D = -2 * far * near / (far - near);
         return Matrix4.makeRowMajor(2 * near / (right - left), 0, A, 0, 0, 2 * near / (top - bottom), B, 0, 0, 0, C, D, 0, 0, -1, 0);
     }
-    static makePerspective(fovy, aspect, near, far) {
+    static makePerspectiveY(fovy, aspect, near, far) {
         var f = 1.0 / Math.tan(Math.PI * fovy / 360.0);
         return Matrix4.makeRowMajor(f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), 2 * far * near / (near - far), 0, 0, -1, 0);
     }
-    static makePerspectiveY(fovx, aspect, near, far) {
+    static makePerspectiveX(fovx, aspect, near, far) {
         var f = 1.0 / Math.tan(Math.PI * fovx / 360.0);
         return Matrix4.makeRowMajor(f, 0, 0, 0, 0, f * aspect, 0, 0, 0, 0, (far + near) / (near - far), 2 * far * near / (near - far), 0, 0, -1, 0);
     }
@@ -560,7 +637,7 @@ class Matrix4 {
     static multiply(m1, m2) {
         return new Matrix4(m1.m11 * m2.m11 + m1.m21 * m2.m12 + m1.m31 * m2.m13 + m1.m41 * m2.m14, m1.m11 * m2.m21 + m1.m21 * m2.m22 + m1.m31 * m2.m23 + m1.m41 * m2.m24, m1.m11 * m2.m31 + m1.m21 * m2.m32 + m1.m31 * m2.m33 + m1.m41 * m2.m34, m1.m11 * m2.m41 + m1.m21 * m2.m42 + m1.m31 * m2.m43 + m1.m41 * m2.m44, m1.m12 * m2.m11 + m1.m22 * m2.m12 + m1.m32 * m2.m13 + m1.m42 * m2.m14, m1.m12 * m2.m21 + m1.m22 * m2.m22 + m1.m32 * m2.m23 + m1.m42 * m2.m24, m1.m12 * m2.m31 + m1.m22 * m2.m32 + m1.m32 * m2.m33 + m1.m42 * m2.m34, m1.m12 * m2.m41 + m1.m22 * m2.m42 + m1.m32 * m2.m43 + m1.m42 * m2.m44, m1.m13 * m2.m11 + m1.m23 * m2.m12 + m1.m33 * m2.m13 + m1.m43 * m2.m14, m1.m13 * m2.m21 + m1.m23 * m2.m22 + m1.m33 * m2.m23 + m1.m43 * m2.m24, m1.m13 * m2.m31 + m1.m23 * m2.m32 + m1.m33 * m2.m33 + m1.m43 * m2.m34, m1.m13 * m2.m41 + m1.m23 * m2.m42 + m1.m33 * m2.m43 + m1.m43 * m2.m44, m1.m14 * m2.m11 + m1.m24 * m2.m12 + m1.m34 * m2.m13 + m1.m44 * m2.m14, m1.m14 * m2.m21 + m1.m24 * m2.m22 + m1.m34 * m2.m23 + m1.m44 * m2.m24, m1.m14 * m2.m31 + m1.m24 * m2.m32 + m1.m34 * m2.m33 + m1.m44 * m2.m34, m1.m14 * m2.m41 + m1.m24 * m2.m42 + m1.m34 * m2.m43 + m1.m44 * m2.m44);
     }
-    copy(m) {
+    LoadMatrix(m) {
         this.m11 = m.m11;
         this.m21 = m.m21;
         this.m31 = m.m31;
@@ -579,8 +656,8 @@ class Matrix4 {
         this.m44 = m.m44;
         return this;
     }
-    concat(m) {
-        this.copy(Matrix4.multiply(this, m));
+    MultMatrix(m) {
+        this.LoadMatrix(Matrix4.multiply(this, m));
         return this;
     }
     transform(v) {
@@ -1577,6 +1654,81 @@ class Texture {
         }
         return new ImageData(pixels, imageW, imageH);
     }
+    // s and t are between 0 and 1, face is 0 through 5
+    // pos x, neg x, pos y, neg y, pos z, neg z
+    static ConvertCubeUVtoXYZ(face, s, t) {
+        let uc = 2 * s - 1;
+        let vc = 2 * t - 1;
+        let v = new Vector3();
+        switch (face) {
+            case 0:
+                v.x = 1;
+                v.y = vc;
+                v.z = -uc;
+                break; // POSITIVE X
+            case 1:
+                v.x = -1;
+                v.y = vc;
+                v.z = uc;
+                break; // NEGATIVE X
+            case 2:
+                v.x = uc;
+                v.y = 1;
+                v.z = -vc;
+                break; // POSITIVE Y
+            case 3:
+                v.x = uc;
+                v.y = -1;
+                v.z = vc;
+                break; // NEGATIVE Y
+            case 4:
+                v.x = uc;
+                v.y = vc;
+                v.z = 1;
+                break; // POSITIVE Z
+            case 5:
+                v.x = -uc;
+                v.y = vc;
+                v.z = -1;
+                break; // NEGATIVE Z
+        }
+        return v;
+    }
+    static CreatePerlinCube(size, face, blackColor, whiteColor) {
+        const checkerboardImage = new ImageData(new Uint8ClampedArray([
+            ...blackColor,
+            ...whiteColor,
+            ...whiteColor,
+            ...blackColor
+        ]), 2, 2);
+        if (face < 0 || face > 5)
+            return checkerboardImage;
+        if (blackColor.length != 4 && whiteColor.length != 4)
+            return checkerboardImage;
+        let imageW = size;
+        let imageH = size;
+        let pixels = new Uint8ClampedArray(imageW * imageH * 4);
+        let addr = 0;
+        for (let y = 0; y < imageH; y++) {
+            let v = y / (imageH - 1);
+            for (let x = 0; x < imageW; x++) {
+                let u = x / (imageW - 1);
+                let cubeDir = Texture.ConvertCubeUVtoXYZ(face, u, v);
+                let waveletNoise = GTE.WaveletNoise.WaveletNoise(cubeDir.x, cubeDir.y, cubeDir.z);
+                let color = [
+                    GTE.lerp(blackColor[0], whiteColor[0], waveletNoise),
+                    GTE.lerp(blackColor[1], whiteColor[1], waveletNoise),
+                    GTE.lerp(blackColor[2], whiteColor[2], waveletNoise),
+                    255.0
+                ];
+                for (let i = 0; i < 4; i++) {
+                    pixels[addr + i] = GTE.clamp(color[i], 0, 255) | 0;
+                }
+                addr += 4;
+            }
+        }
+        return new ImageData(pixels, imageW, imageH);
+    }
 }
 /// <reference path="./Fluxions.ts" />
 /// <reference path="./RenderConfig.ts" />
@@ -1934,7 +2086,7 @@ class WebGLTest1 {
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(-.2, 0, 0);
         this.Object2Matrix = Matrix4.makeTranslation(.2, 0, 0);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertices = [
             0, 1, 0, 1,
             -1, -1, 0, 1,
@@ -2115,7 +2267,7 @@ void main(void)
         }
         if (loc = this.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
         let wmloc = this.uniforms.get("WorldMatrix");
@@ -2154,7 +2306,7 @@ class WebGLTest2 {
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(0, 0, 0);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
 uniform mat4 CameraMatrix;
@@ -2341,7 +2493,7 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
@@ -2495,12 +2647,170 @@ var WebGLTemplate;
                 ctx._hasDepthTexture = true;
                 ctx._hasTextureFloat = true;
                 ctx._hasElementIndexUint = true;
+                console.log("standard derivatives, depth texture, texture float, and element index uint supported");
             }
             return ctx;
         }
     }
     WebGLTemplate.Context = Context;
 })(WebGLTemplate || (WebGLTemplate = {}));
+var GTE;
+(function (GTE) {
+    function clamp(x, a, b) {
+        return x < a ? a : x > b ? b : x;
+    }
+    GTE.clamp = clamp;
+    // 0 <= mix <= 1
+    function lerp(a, b, mix) {
+        return mix * a + (1 - mix) * b;
+    }
+    GTE.lerp = lerp;
+    class WaveletNoiseCalculator {
+        constructor(noiseTileSize = 128) {
+            this.noiseTileSize = noiseTileSize;
+            this.initialized = false;
+            this.noiseTileData = new Float32Array(noiseTileSize * noiseTileSize * noiseTileSize);
+            this.GenerateNoiseTile(noiseTileSize, 0);
+        }
+        Mod(x, n) {
+            let m = x % n;
+            return m < 0 ? m + n : m;
+        }
+        Downsample(from, to, n, stride) {
+            const ARAD = 16;
+            let coefs = new Float32Array([
+                0.000334, -0.001528, 0.000410, 0.003545, -0.000938, -0.008233, 0.002172, 0.019120,
+                -0.005040, -0.044412, 0.011655, 0.103311, -0.025936, -0.243780, 0.033979, 0.655340,
+                0.655340, 0.033979, -0.243780, -0.025936, 0.103311, 0.011655, -0.044412, -0.005040,
+                0.019120, 0.002172, -0.008233, -0.000938, 0.003546, 0.000410, -0.001528, 0.000334,
+                0
+            ]);
+            let a = coefs.subarray(ARAD);
+            for (let i = 0; i < ((n / 2) | 0); i++) {
+                to[i * stride] = 0;
+                for (let k = 2 * i - ARAD; k <= 2 * i + ARAD; k++) {
+                    let _a = coefs[ARAD + k - 2 * i];
+                    to[i * stride] += _a * from[this.Mod(k, n) * stride];
+                    if (!isFinite(to[i * stride])) {
+                        console.error("non finite number produced");
+                    }
+                }
+            }
+        }
+        Upsample(from, to, n, stride) {
+            const ARAD = 16;
+            let pCoefs = new Float32Array([0.25, 0.75, 0.75, 0.25]);
+            let p = pCoefs.subarray(2);
+            for (let i = 0; i < n; i++) {
+                to[i * stride] = 0;
+                let k1 = (i / 2) | 0;
+                let k2 = k1 + 1;
+                for (let k = k1; k <= k2; k++) {
+                    let _p = pCoefs[2 + i - 2 * k];
+                    to[i * stride] += _p * from[this.Mod(k, n / 2) * stride];
+                    if (!isFinite(to[i * stride])) {
+                        console.error("non finite number produced");
+                    }
+                }
+            }
+        }
+        GenerateNoiseTile(n) {
+            if (n % 2) {
+                n++;
+            }
+            let ix = 0;
+            let iy = 0;
+            let iz = 0;
+            let sz = n * n * n * 4;
+            let temp1 = new Float32Array(n * n * n);
+            let temp2 = new Float32Array(n * n * n);
+            let noise = new Float32Array(n * n * n);
+            for (let i = 0; i < n * n * n; i++) {
+                // Wavelet noise paper says "GaussianNoise"
+                noise[i] = Math.random() * 2 - 1;
+            }
+            // Downsample and upsample
+            for (iy = 0; iy < n; iy++) {
+                for (iz = 0; iz < n; iz++) {
+                    let i = iy * n + iz * n * n;
+                    this.Downsample(noise.subarray(i), temp1.subarray(i), n, 1);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, 1);
+                }
+            }
+            for (ix = 0; ix < n; ix++) {
+                for (iz = 0; iz < n; iz++) {
+                    let i = ix + iz * n * n;
+                    this.Downsample(temp2.subarray(i), temp1.subarray(i), n, n);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, n);
+                }
+            }
+            for (ix = 0; ix < n; ix++) {
+                for (iy = 0; iy < n; iy++) {
+                    let i = ix + iy * n;
+                    this.Downsample(temp2.subarray(i), temp1.subarray(i), n, n * n);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, n * n);
+                }
+            }
+            for (let i = 0; i < n * n * n; i++) {
+                noise[i] -= temp2[i];
+            }
+            let offset = n / 2;
+            if (offset % 2) {
+                offset++;
+            }
+            for (let i = 0, ix = 0; ix < n; ix++) {
+                for (iy = 0; iy < n; iy++) {
+                    for (iz = 0; iz < n; iz++) {
+                        temp1[i++] = noise[this.Mod(ix + offset, n) + this.Mod(iy + offset, n) * n + this.Mod(iz + offset, n) * n * n];
+                    }
+                }
+            }
+            for (let i = 0; i < n * n * n; i++) {
+                noise[i] += temp1[i];
+            }
+            this.noiseTileData = noise;
+            this.initialized = true;
+        }
+        WaveletNoise(x, y, z, octave = 128) {
+            let p = [octave * x, octave * y, octave * z];
+            let i = 0;
+            let f = [0, 0, 0];
+            let c = [0, 0, 0];
+            let n = this.noiseTileSize;
+            let mid = [0, 0, 0];
+            let w = [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ];
+            let t = 0;
+            let result = 0;
+            // B-spline quadratic basis function
+            for (i = 0; i < 3; i++) {
+                mid[i] = Math.ceil(p[i] - 0.5);
+                t = mid[i] - (p[i] - 0.5);
+                w[i][0] = t * t / 2;
+                w[i][2] = (1 - t) * (1 - t) / 2;
+                w[i][1] = 1 - w[i][0] - w[i][2];
+            }
+            for (f[2] = -1; f[2] <= 1; f[2]++) {
+                for (f[1] = -1; f[1] <= 1; f[1]++) {
+                    for (f[0] = -1; f[0] <= 1; f[0]++) {
+                        let weight = 1;
+                        for (i = 0; i < 3; i++) {
+                            c[i] = this.Mod(mid[i] + f[i], n);
+                            weight *= w[i][f[i] + 1];
+                            result += weight * this.noiseTileData[c[2] * n * n + c[1] * n + c[0]];
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+    GTE.WaveletNoiseCalculator = WaveletNoiseCalculator;
+    GTE.WaveletNoise = new WaveletNoiseCalculator(64);
+})(GTE || (GTE = {}));
 /// <reference path="Fluxions.ts" />
 /// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
@@ -2515,11 +2825,13 @@ class WebGLTest3 {
         // Original properties
         this.texture2D = null;
         this.textureCM = null;
+        this.textureCubePerlin = null;
+        this.texturePerlin = null;
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(0, -0.5, 0);
         this.Object2Matrix = Matrix4.makeTranslation(.2, 0, -5);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
 uniform mat4 CameraMatrix;
@@ -2602,6 +2914,14 @@ void main(void)
             gl.deleteTexture(this.textureCM);
             this.textureCM = null;
         }
+        if (this.textureCubePerlin) {
+            gl.deleteTexture(this.textureCubePerlin);
+            this.textureCubePerlin = null;
+        }
+        if (this.texturePerlin) {
+            gl.deleteTexture(this.texturePerlin);
+            this.texturePerlin = null;
+        }
         this.fluxions = null;
     }
     initShaders(gl) {
@@ -2616,22 +2936,22 @@ void main(void)
         if (!this.fluxions)
             return false;
         this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
-        this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
-        this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
-        this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
-        this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
-        this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
-        this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
-        this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
-        this.geometryMesh.BeginSurface(gl.TRIANGLES);
-        this.geometryMesh.AddIndex(0);
-        this.geometryMesh.AddIndex(1);
-        this.geometryMesh.AddIndex(2);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(0);
+        // this.geometryMesh.AddIndex(1);
+        // this.geometryMesh.AddIndex(2);
         this.geometryMesh.LoadObject("assets/teapot.obj");
-        let x = 2.0 * 640 / 384;
+        let x = 2.0; // * 640 / 384;
         let y = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
         this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
@@ -2644,10 +2964,10 @@ void main(void)
         this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
         this.geometryMesh.VertexAttrib2(0, -x, -y);
         this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
-        this.geometryMesh.AddIndex(3);
-        this.geometryMesh.AddIndex(4);
-        this.geometryMesh.AddIndex(5);
-        this.geometryMesh.AddIndex(6);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
             return false;
@@ -2682,6 +3002,24 @@ void main(void)
         }
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        this.textureCubePerlin = gl.createTexture();
+        if (this.textureCubePerlin) {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+            for (let i = 0; i < 6; i++) {
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(128, i, cubeColorsDark[i], cubeColorsLight[i]));
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+        this.texturePerlin = gl.createTexture();
+        if (this.texturePerlin) {
+            gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(32, 4, Colors.Blue, Colors.Green));
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");
             return false;
@@ -2698,8 +3036,16 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
         let loc;
         if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            // this.CameraMatrix.LoadIdentity();
+            // this.CameraMatrix.Translate(0.0, 0.0, 5.0);
+            // this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 0.0, 1.0, 0.0);
+            // this.CameraMatrix.Rotate(timeInSeconds, 1.0, 0.0, 0.0);
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
         }
         if (loc = this.renderConfig.uniforms.get("LightDir")) {
@@ -2707,7 +3053,7 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
@@ -2716,6 +3062,12 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("TextureCube")) {
             gl.uniform1i(loc, 1);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCubePerlin")) {
+            gl.uniform1i(loc, 2);
+        }
+        if (loc = this.renderConfig.uniforms.get("TexturePerlin")) {
+            gl.uniform1i(loc, 3);
         }
         let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
         if (wmloc) {
@@ -2730,6 +3082,10 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE0);
         gl.useProgram(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -2739,3 +3095,4 @@ void main(void)
     }
 }
 ;
+//# sourceMappingURL=webgl-template.js.map
