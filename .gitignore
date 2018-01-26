@@ -1,3 +1,4 @@
+.vs
 *.pdf
 *.obj
 !assets/teapot.obj
