@@ -111,8 +111,12 @@ void main(void)
 
     initShaders(gl: WebGLRenderingContext): boolean {
         if (this.fluxions) {
+            let self = this;
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            this.shaderLoader = new Utils.ShaderLoader("shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag", (vsSrc: string, fsSrc: string) => {
+                if (self.renderConfig)
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+            });
             //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
         }
 

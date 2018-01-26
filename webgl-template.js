@@ -1734,62 +1734,181 @@ class Texture {
 /// <reference path="./RenderConfig.ts" />
 var Utils;
 (function (Utils) {
+    // return last part of the url name ignoring possible ending slash
+    function GetURLResource(url) {
+        let parts = url.split('/');
+        let lastSection = parts.pop() || parts.pop();
+        if (lastSection) {
+            return lastSection;
+        }
+        else {
+            return "unknown";
+        }
+    }
+    Utils.GetURLResource = GetURLResource;
+    function GetURLPath(url) {
+        let resource = GetURLResource(url);
+        let parts = url.split('/');
+        let path = parts.pop() || parts.pop();
+        path = parts.pop() + "/";
+        if (path) {
+            return path;
+        }
+        else {
+            return "";
+        }
+    }
+    Utils.GetURLPath = GetURLPath;
+    function IsExtension(sourceString, extensionWithDot) {
+        let start = sourceString.length - extensionWithDot.length - 1;
+        if (start >= 0 && sourceString.substr(start, extensionWithDot.length) == extensionWithDot) {
+            return true;
+        }
+        return false;
+    }
+    Utils.IsExtension = IsExtension;
+    function GetExtension(sourceString) {
+        let position = sourceString.lastIndexOf(".");
+        if (position >= 0) {
+            return sourceString.substr(position + 1).toLowerCase();
+        }
+        return "";
+    }
+    Utils.GetExtension = GetExtension;
     class ShaderLoader {
-        constructor(rc, vertShaderUrl, fragShaderUrl) {
-            this.rc = rc;
+        constructor(vertShaderUrl, fragShaderUrl, callbackfn) {
             this.vertShaderUrl = vertShaderUrl;
             this.fragShaderUrl = fragShaderUrl;
+            this.callbackfn = callbackfn;
             this.vertLoaded = false;
             this.fragLoaded = false;
+            this.vertFailed = false;
+            this.fragFailed = false;
             this.vertShaderSource = "";
             this.fragShaderSource = "";
             let self = this;
-            let vertAjax = new XMLHttpRequest();
-            vertAjax.addEventListener("load", (e) => {
-                self.vertShaderSource = vertAjax.responseText;
+            let vertXHR = new XMLHttpRequest();
+            vertXHR.addEventListener("load", (e) => {
+                self.vertShaderSource = vertXHR.responseText;
                 self.vertLoaded = true;
-                if (self.vertLoaded && self.fragLoaded) {
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
                 }
             });
-            vertAjax.open("GET", vertShaderUrl);
-            vertAjax.send();
-            let fragAjax = new XMLHttpRequest();
-            fragAjax.addEventListener("load", (e) => {
-                self.fragShaderSource = fragAjax.responseText;
-                self.fragLoaded = true;
-                if (self.vertLoaded && self.fragLoaded)
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+            vertXHR.addEventListener("abort", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
             });
-            fragAjax.open("GET", fragShaderUrl);
-            fragAjax.send();
+            vertXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
+            });
+            vertXHR.open("GET", vertShaderUrl);
+            vertXHR.send();
+            let fragXHR = new XMLHttpRequest();
+            fragXHR.addEventListener("load", (e) => {
+                self.fragShaderSource = fragXHR.responseText;
+                self.fragLoaded = true;
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
+                }
+            });
+            fragXHR.addEventListener("abort", (e) => {
+                self.fragFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            });
+            fragXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            });
+            fragXHR.open("GET", fragShaderUrl);
+            fragXHR.send();
         }
+        get failed() { return this.vertFailed || this.fragFailed; }
+        get loaded() { return this.vertLoaded && this.fragLoaded; }
     }
     Utils.ShaderLoader = ShaderLoader;
     class TextFileLoader {
-        constructor(url, callbackfn) {
+        constructor(url, callbackfn, parameter = 0) {
             this.callbackfn = callbackfn;
-            this.loaded = false;
-            this.error = false;
+            this._loaded = false;
+            this._failed = false;
             this.data = "";
+            this.name = GetURLResource(url);
             let self = this;
-            let ajax = new XMLHttpRequest();
-            ajax.addEventListener("load", (e) => {
-                if (!ajax.responseText) {
-                    self.error = true;
+            let xhr = new XMLHttpRequest();
+            xhr.addEventListener("load", (e) => {
+                if (!xhr.responseText) {
+                    self._failed = true;
                     self.data = "unknown";
                 }
                 else {
-                    self.data = ajax.responseText;
+                    self.data = xhr.responseText;
                 }
-                callbackfn(self.data);
-                self.loaded = true;
+                callbackfn(self.data, self.name, parameter);
+                self._loaded = true;
             });
-            ajax.open("GET", url);
-            ajax.send();
+            xhr.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.open("GET", url);
+            xhr.send();
         }
+        get loaded() { return this._loaded; }
+        get failed() { return this._failed; }
     }
     Utils.TextFileLoader = TextFileLoader;
+    class ImageFileLoader {
+        constructor(url, callbackfn, parameter = 0) {
+            this.callbackfn = callbackfn;
+            this._loaded = false;
+            this._failed = false;
+            this.image = new Image();
+            this.name = GetURLResource(url);
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            this.image.addEventListener("load", (e) => {
+                callbackfn(self.image, this.name, parameter);
+                self._loaded = true;
+            });
+            this.image.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.src = url;
+        }
+        get loaded() { return this._loaded; }
+        get failed() { return this._failed; }
+    }
+    Utils.ImageFileLoader = ImageFileLoader;
+    function SeparateCubeMapImages(image, images) {
+        if (image.width != 6 * image.height) {
+            return;
+        }
+        // images are laid out: +X, -X, +Y, -Y, +Z, -Z
+        let canvas = document.createElement("canvas");
+        if (canvas) {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            let ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.drawImage(image, 0, 0);
+                for (let i = 0; i < 6; i++) {
+                    images[i] = ctx.getImageData(i * image.width, 0, image.width, image.width);
+                }
+            }
+        }
+    }
+    Utils.SeparateCubeMapImages = SeparateCubeMapImages;
     class GLTypeInfo {
         constructor(type, baseType, components, sizeOfType) {
             this.type = type;
@@ -2393,8 +2512,12 @@ void main(void)
     }
     initShaders(gl) {
         if (this.fluxions) {
+            let self = this;
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            this.shaderLoader = new Utils.ShaderLoader("shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig)
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+            });
             //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
         }
         return true;
@@ -2525,6 +2648,209 @@ void main(void)
     }
 }
 ;
+/// <reference path="Fluxions.ts" />
+/// <reference path="Utils.ts" />
+var SGAssetType;
+(function (SGAssetType) {
+    SGAssetType[SGAssetType["Scene"] = 0] = "Scene";
+    SGAssetType[SGAssetType["GeometryGroup"] = 1] = "GeometryGroup";
+    SGAssetType[SGAssetType["MaterialLibrary"] = 2] = "MaterialLibrary";
+    SGAssetType[SGAssetType["ShaderProgram"] = 3] = "ShaderProgram";
+    SGAssetType[SGAssetType["Image"] = 4] = "Image";
+})(SGAssetType || (SGAssetType = {}));
+;
+class ScenegraphNode {
+    constructor(name) {
+        this.name = name;
+        this.geometryGroup = "";
+        this.transform = Matrix4.makeIdentity();
+    }
+}
+class Scenegraph {
+    constructor(fluxions) {
+        this.fluxions = fluxions;
+        this.textfiles = [];
+        this.imagefiles = [];
+        this.shaderSrcFiles = [];
+        this._renderConfigs = new Map();
+        this._cubeTextures = new Map();
+        this._textures = new Map();
+        this._nodes = [];
+        this._tempNode = new ScenegraphNode("working");
+    }
+    get percentLoaded() {
+        let a = 0;
+        for (let t of this.textfiles) {
+            if (t.loaded)
+                a++;
+        }
+        for (let i of this.imagefiles) {
+            if (i.loaded)
+                a++;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (s.loaded)
+                a++;
+        }
+        return 100.0 * a / (this.textfiles.length + this.imagefiles.length + this.shaderSrcFiles.length);
+    }
+    Load(url) {
+        let name = Utils.GetURLResource(url);
+        let self = this;
+        let assetType;
+        let ext = Utils.GetExtension(name);
+        let path = Utils.GetURLPath(url);
+        if (ext == "scn")
+            assetType = SGAssetType.Scene;
+        else if (ext == "obj")
+            assetType = SGAssetType.GeometryGroup;
+        else if (ext == "mtl")
+            assetType = SGAssetType.MaterialLibrary;
+        else if (ext == "png")
+            assetType = SGAssetType.Image;
+        else if (ext == "jpg")
+            assetType = SGAssetType.Image;
+        else
+            return;
+        console.log("Scenegraph::Load() => Requesting " + url);
+        if (assetType == SGAssetType.Image) {
+            this.imagefiles.push(new Utils.ImageFileLoader(url, (data, name, assetType) => {
+                console.log("Scenegraph::Load() => Loaded " + name);
+                self.processTextureMap(data, name, assetType);
+                console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+            }));
+        }
+        else {
+            this.textfiles.push(new Utils.TextFileLoader(url, (data, name, assetType) => {
+                console.log("Scenegraph::Load() => Loaded " + name);
+                self.processTextFile(data, name, path, assetType);
+                console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+            }, assetType));
+        }
+    }
+    AddRenderConfig(name, vertshaderUrl, fragshaderUrl) {
+        let self = this;
+        this.shaderSrcFiles.push(new Utils.ShaderLoader(vertshaderUrl, fragshaderUrl, (vertShaderSource, fragShaderSource) => {
+            console.log("Scenegraph::Load() => Loaded " + vertshaderUrl);
+            console.log("Scenegraph::Load() => Loaded " + fragshaderUrl);
+            this._renderConfigs.set(name, self.fluxions.CreateRenderConfig(vertShaderSource, fragShaderSource));
+            console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+        }));
+    }
+    processTextFile(data, name, path, assetType) {
+        // split into lines
+        let lines = data.split("\n");
+        for (let line of lines) {
+            let splittokens = line.split(/\s+/);
+            let tokens = [];
+            for (let t of splittokens) {
+                if (t.length != 0)
+                    tokens.push(t);
+            }
+            // ignore blank lines
+            if (tokens.length == 0) {
+                continue;
+            }
+            // ignore comments
+            if (tokens[0] == '#') {
+                continue;
+            }
+            // console.log(name + ": " + line);
+            switch (assetType) {
+                // ".SCN"
+                case SGAssetType.Scene:
+                    this.processSceneTokens(tokens, path);
+                    break;
+                // ".OBJ"
+                case SGAssetType.GeometryGroup:
+                    this.processGeometryGroupTokens(tokens, path);
+                    break;
+                // ".MTL"
+                case SGAssetType.MaterialLibrary:
+                    console.log("MTLLIB: " + line);
+                    this.processMaterialLibraryTokens(tokens, path);
+                    break;
+            }
+        }
+    }
+    processTextureMap(image, name, assetType) {
+        let gl = this.fluxions.gl;
+        if (image.width = 6 * image.height) {
+            let images = new Array(6);
+            Utils.SeparateCubeMapImages(image, images);
+            let texture = gl.createTexture();
+            if (texture) {
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+                for (let i = 0; i < 6; i++) {
+                    if (!images[i])
+                        continue;
+                    gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+                }
+                gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+                this._cubeTextures.set(name, texture);
+            }
+        }
+        else {
+            let texture = gl.createTexture();
+            if (texture) {
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                this._textures.set(name, texture);
+            }
+        }
+    }
+    processSceneTokens(tokens, path) {
+        // sundir <direction: Vector3>
+        // camera <eye: Vector3> <center: Vector3> <up: Vector3>
+        // transform <worldMatrix: Matrix4>
+        // geometryGroup <objUrl: string>
+        if (tokens[0] == "geometryGroup") {
+            this.Load(path + tokens[1]);
+        }
+    }
+    processGeometryGroupTokens(tokens, path) {
+        // mtllib <mtlUrl: string>
+        // usemtl <name: string>
+        // v <position: Vector3>
+        // vn <normal: Vector3>
+        // vt <texcoord: Vector2|Vector3>
+        // vc <color: Vector4>
+        // f <v1: number> <v2: number> <v3: number>
+        // f <v1: number>/<vt1:number> <v2: number>/<vt2:number> <v2: number>/<vt2:number>
+        // f <v1: number>//<vt1:number> <v2: number>//<vt2:number> <v2: number>//<vt2:number>
+        // f <v1: number>/<vn1:number>/<vt1:number> <v2: number>/<vn2:number>/<vt2:number> <v2: number>/<vn3:number>/<vt2:number>
+        // o <objectName: string>
+        // g <newSmoothingGroup: string>
+        // s <newSmoothingGroup: string>
+        if (tokens[0] == "mtllib") {
+            this.Load(path + tokens[1]);
+        }
+    }
+    processMaterialLibraryTokens(tokens, path) {
+        // newmtl <name: string>
+        // Kd <color: Vector3>
+        // Ks <color: Vector3>
+        // map_Kd <url: string>
+        // map_Ks <url: string>
+        // map_normal <url: string>
+        if (tokens[0] == "map_Kd") {
+            this.Load(path + tokens[1]);
+        }
+        else if (tokens[0] == "map_Ks") {
+            this.Load(path + tokens[1]);
+        }
+        else if (tokens[0] == "map_normal") {
+            this.Load(path + tokens[1]);
+        }
+        else {
+            console.log("MTLLIB: Ignoring");
+            for (let t of tokens) {
+                console.log("\"" + t + "\"");
+            }
+        }
+    }
+}
 /// <reference path="Vector2.ts" />
 /// <reference path="Vector3.ts" />
 /// <reference path="Vector4.ts" />
@@ -2539,6 +2865,7 @@ void main(void)
 /// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
 /// <reference path="Utils.ts" />
+/// <reference path="Scenegraph.ts" />
 class Fluxions {
     constructor(gl) {
         this.gl = gl;
@@ -2670,7 +2997,7 @@ var GTE;
             this.noiseTileSize = noiseTileSize;
             this.initialized = false;
             this.noiseTileData = new Float32Array(noiseTileSize * noiseTileSize * noiseTileSize);
-            this.GenerateNoiseTile(noiseTileSize, 0);
+            this.GenerateNoiseTile(noiseTileSize);
         }
         Mod(x, n) {
             let m = x % n;
@@ -2926,9 +3253,13 @@ void main(void)
     }
     initShaders(gl) {
         if (this.fluxions) {
+            let self = this;
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
+            this.shaderLoader = new Utils.ShaderLoader("shaders/pbr.vert", "shaders/pbr.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig) {
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+                }
+            });
         }
         return true;
     }
@@ -3042,10 +3373,303 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
         let loc;
         if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
-            // this.CameraMatrix.LoadIdentity();
-            // this.CameraMatrix.Translate(0.0, 0.0, 5.0);
-            // this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 0.0, 1.0, 0.0);
-            // this.CameraMatrix.Rotate(timeInSeconds, 1.0, 0.0, 0.0);
+            this.CameraMatrix.LoadIdentity();
+            //this.CameraMatrix.Translate(0.0, 0.0, -5.0);
+            this.CameraMatrix.Rotate(10.0 * timeInSeconds, 0.0, 1.0, 0.0);
+            this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 1.0, 0.0, 0.0);
+            this.CameraMatrix.Translate(0.0, 0.0, -10.0);
+            gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("LightDir")) {
+            gl.uniform3fv(loc, new Vector3(0.25, 0.25, 1.0).toFloat32Array());
+        }
+        if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
+            let aspect = gl.canvas.width / gl.canvas.height;
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
+            //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
+            gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("Texture2D")) {
+            gl.uniform1i(loc, 0);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCube")) {
+            gl.uniform1i(loc, 1);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCubePerlin")) {
+            gl.uniform1i(loc, 2);
+        }
+        if (loc = this.renderConfig.uniforms.get("TexturePerlin")) {
+            gl.uniform1i(loc, 3);
+        }
+        let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
+        if (wmloc) {
+            let matRotate = Matrix4.multiply(this.Object1Matrix, Matrix4.makeRotation(5 * timeInSeconds, 0, 1, 0));
+            let matrix = matRotate.asColMajorArray();
+            gl.uniformMatrix4fv(wmloc, false, matrix);
+        }
+        if (this.geometryMesh && this.renderConfig) {
+            this.geometryMesh.Render(this.renderConfig);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.useProgram(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.disable(gl.DEPTH_TEST);
+        return true;
+    }
+}
+;
+/// <reference path="Fluxions.ts" />
+/// <reference path="Colors.ts" />
+/// <reference path="IndexedGeometryMesh.ts" />
+class WebGLTest4 {
+    constructor() {
+        // New properties
+        this.fluxions = null;
+        this.renderConfig = null;
+        this.geometryMesh = null;
+        this.initialized = false;
+        this.shaderLoader = null;
+        // Original properties
+        this.texture2D = null;
+        this.textureCM = null;
+        this.textureCubePerlin = null;
+        this.texturePerlin = null;
+        this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
+        this.WorldMatrix = Matrix4.makeIdentity();
+        this.Object1Matrix = Matrix4.makeTranslation(0, -0.5, 0);
+        this.Object2Matrix = Matrix4.makeTranslation(.2, 0, -5);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
+        this.vertShaderSource = `
+uniform mat4 WorldMatrix;
+uniform mat4 CameraMatrix;
+uniform mat4 ProjectionMatrix;
+
+attribute vec4 aPosition;
+attribute vec3 aNormal;
+attribute vec4 aColor;
+attribute vec4 aTexCoord;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    VS_Position = WorldMatrix * aPosition;
+    VS_CameraDir = CameraMatrix[3].xyz - VS_Position.xyz;
+    VS_Normal = aNormal;
+    VS_Color = aColor;
+    VS_TexCoord = aTexCoord;
+    gl_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+}
+        `;
+        this.fragShaderSource = `
+precision mediump float;
+
+uniform float timer;
+uniform vec2  mouse;
+uniform vec3  LightDir;
+
+uniform sampler2D Texture2D;
+uniform samplerCube TextureCube;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    vec3 V = normalize(VS_CameraDir);
+    vec3 L = normalize (LightDir);
+    vec3 N = normalize (VS_Normal);
+    float NdotL = max(0.0, dot(N, L));
+    gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = textureCube(TextureCube, vec3(-1.0, VS_TexCoord.s, VS_TexCoord.t));
+    gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
+}
+        `;
+    }
+    test(gl, timeInSeconds) {
+        if (!this.fluxions) {
+            this.fluxions = new Fluxions(gl);
+            this.scenegraph = new Scenegraph(this.fluxions);
+            this.scenegraph.AddRenderConfig("pbr", "shaders/pbr.vert", "shaders/pbr.frag");
+            this.scenegraph.Load("assets/testscene.scn");
+            if (!this.initShaders(gl)) {
+                this.kill(gl);
+                return false;
+            }
+            if (!this.initBuffers(gl)) {
+                this.kill(gl);
+                return false;
+            }
+        }
+        if (!this.drawScene(gl, timeInSeconds)) {
+            this.kill(gl);
+            return false;
+        }
+        //this.kill(gl);
+        return true;
+    }
+    kill(gl) {
+        if (this.texture2D) {
+            gl.deleteTexture(this.texture2D);
+            this.texture2D = null;
+        }
+        if (this.textureCM) {
+            gl.deleteTexture(this.textureCM);
+            this.textureCM = null;
+        }
+        if (this.textureCubePerlin) {
+            gl.deleteTexture(this.textureCubePerlin);
+            this.textureCubePerlin = null;
+        }
+        if (this.texturePerlin) {
+            gl.deleteTexture(this.texturePerlin);
+            this.texturePerlin = null;
+        }
+        this.fluxions = null;
+    }
+    initShaders(gl) {
+        if (this.fluxions) {
+            let self = this;
+            this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
+            this.shaderLoader = new Utils.ShaderLoader("shaders/pbr.vert", "shaders/pbr.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig) {
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+                }
+            });
+        }
+        return true;
+    }
+    initBuffers(gl) {
+        if (!this.fluxions)
+            return false;
+        this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(0);
+        // this.geometryMesh.AddIndex(1);
+        // this.geometryMesh.AddIndex(2);
+        this.geometryMesh.LoadObject("assets/teapot.obj");
+        let x = 2.0; // * 640 / 384;
+        let y = 2.0;
+        this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, -x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, x, -y);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, -x, -y);
+        this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing buffers");
+            return false;
+        }
+        const cubeColorsLight = [
+            Colors.LightRed,
+            Colors.LightCyan,
+            Colors.LightGreen,
+            Colors.LightMagenta,
+            Colors.LightBlue,
+            Colors.LightYellow
+        ];
+        const cubeColorsDark = [
+            Colors.DarkRed,
+            Colors.DarkCyan,
+            Colors.DarkGreen,
+            Colors.DarkMagenta,
+            Colors.DarkBlue,
+            Colors.DarkYellow
+        ];
+        this.texture2D = gl.createTexture();
+        this.textureCM = gl.createTexture();
+        if (!this.texture2D || !this.textureCM)
+            return false;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, Colors.Blue, Colors.Yellow));
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        for (let i = 0; i < 6; i++) {
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, cubeColorsDark[i], cubeColorsLight[i]));
+        }
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        this.textureCubePerlin = gl.createTexture();
+        if (this.textureCubePerlin) {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+            for (let i = 0; i < 6; i++) {
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(128, i, cubeColorsDark[i], cubeColorsLight[i]));
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+        this.texturePerlin = gl.createTexture();
+        if (this.texturePerlin) {
+            gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(32, 4, Colors.Blue, Colors.Green));
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing textures");
+            return false;
+        }
+        return true;
+    }
+    drawScene(gl, timeInSeconds) {
+        if (!this.renderConfig)
+            return false;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.enable(gl.DEPTH_TEST);
+        this.renderConfig.Use();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+        let loc;
+        if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            this.CameraMatrix.LoadIdentity();
+            //this.CameraMatrix.Translate(0.0, 0.0, -5.0);
+            this.CameraMatrix.Rotate(10.0 * timeInSeconds, 0.0, 1.0, 0.0);
+            this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 1.0, 0.0, 0.0);
+            this.CameraMatrix.Translate(0.0, 0.0, -10.0);
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
         }
         if (loc = this.renderConfig.uniforms.get("LightDir")) {

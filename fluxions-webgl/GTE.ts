@@ -15,7 +15,7 @@ namespace GTE {
         private initialized: boolean = false;
         constructor(public noiseTileSize: number = 128) {
             this.noiseTileData = new Float32Array(noiseTileSize * noiseTileSize * noiseTileSize);
-            this.GenerateNoiseTile(noiseTileSize, 0);
+            this.GenerateNoiseTile(noiseTileSize);
         }
 
         Mod(x: number, n: number): number {
