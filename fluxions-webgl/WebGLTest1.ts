@@ -19,7 +19,7 @@ class WebGLTest1 {
     WorldMatrix: Matrix4 = Matrix4.makeIdentity();
     Object1Matrix: Matrix4 = Matrix4.makeTranslation(-.2, 0, 0);
     Object2Matrix: Matrix4 = Matrix4.makeTranslation(.2, 0, 0);
-    ProjectionMatrix: Matrix4 = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+    ProjectionMatrix: Matrix4 = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
 
     vertices: number[] = [
         0, 1, 0, 1,
@@ -220,7 +220,7 @@ void main(void)
 
         if (loc = this.uniforms.get("ProjectionMatrix")) {
             let aspect: number = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
 

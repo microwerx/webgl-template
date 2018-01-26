@@ -103,6 +103,7 @@ namespace WebGLTemplate {
                 ctx._hasDepthTexture = true;
                 ctx._hasTextureFloat = true;
                 ctx._hasElementIndexUint = true;
+                console.log("standard derivatives, depth texture, texture float, and element index uint supported")
             }
             return ctx;
         }

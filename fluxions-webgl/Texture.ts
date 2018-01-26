@@ -218,4 +218,60 @@ class Texture {
         }
         return new ImageData(pixels, imageW, imageH);
     }
+
+    // s and t are between 0 and 1, face is 0 through 5
+    // pos x, neg x, pos y, neg y, pos z, neg z
+    static ConvertCubeUVtoXYZ(face: number, s: number, t: number): Vector3 {
+        let uc = 2 * s - 1;
+        let vc = 2 * t - 1;
+        let v = new Vector3();
+        switch (face) {
+            case 0: v.x = 1; v.y = vc; v.z = -uc; break;	// POSITIVE X
+            case 1: v.x = -1; v.y = vc; v.z = uc; break;	// NEGATIVE X
+            case 2: v.x = uc; v.y = 1; v.z = -vc; break;	// POSITIVE Y
+            case 3: v.x = uc; v.y = -1; v.z = vc; break;	// NEGATIVE Y
+            case 4: v.x = uc; v.y = vc; v.z = 1; break;	// POSITIVE Z
+            case 5: v.x = -uc; v.y = vc; v.z = -1; break;	// NEGATIVE Z
+        }
+        return v;
+    }
+
+    static CreatePerlinCube(size: number, face: number, blackColor: number[], whiteColor: number[]): ImageData {
+        const checkerboardImage = new ImageData(new Uint8ClampedArray([
+            ...blackColor,
+            ...whiteColor,
+            ...whiteColor,
+            ...blackColor
+        ]), 2, 2);
+
+        if (face < 0 || face > 5)
+            return checkerboardImage;
+        if (blackColor.length != 4 && whiteColor.length != 4)
+            return checkerboardImage;
+
+        let imageW = size;
+        let imageH = size;
+        let pixels = new Uint8ClampedArray(imageW * imageH * 4);
+        let addr = 0;
+        for (let y = 0; y < imageH; y++) {
+            let v = y / (imageH - 1);
+            for (let x = 0; x < imageW; x++) {
+                let u = x / (imageW - 1);
+
+                let cubeDir = Texture.ConvertCubeUVtoXYZ(face, u, v);
+                let waveletNoise = GTE.WaveletNoise.WaveletNoise(cubeDir.x, cubeDir.y, cubeDir.z);
+                let color: number[] = [
+                    GTE.lerp(blackColor[0], whiteColor[0], waveletNoise),
+                    GTE.lerp(blackColor[1], whiteColor[1], waveletNoise),
+                    GTE.lerp(blackColor[2], whiteColor[2], waveletNoise),
+                    255.0
+                ];
+                for (let i = 0; i < 4; i++) {
+                    pixels[addr + i] = GTE.clamp(color[i], 0, 255) | 0;
+                }
+                addr += 4;
+            }
+        }
+        return new ImageData(pixels, imageW, imageH);
+    }
 }

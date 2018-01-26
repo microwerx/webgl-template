@@ -449,6 +449,83 @@ class Matrix4 {
         this.m34 = m34;
         this.m44 = m44;
     }
+    copy(m) {
+        return this.LoadMatrix(m);
+    }
+    LoadRowMajor(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44) {
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m14 = m14;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m24 = m24;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        this.m34 = m34;
+        this.m41 = m41;
+        this.m42 = m42;
+        this.m43 = m43;
+        this.m44 = m44;
+        return this;
+    }
+    LoadColMajor(m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44) {
+        this.m11 = m11;
+        this.m12 = m12;
+        this.m13 = m13;
+        this.m14 = m14;
+        this.m21 = m21;
+        this.m22 = m22;
+        this.m23 = m23;
+        this.m24 = m24;
+        this.m31 = m31;
+        this.m32 = m32;
+        this.m33 = m33;
+        this.m34 = m34;
+        this.m41 = m41;
+        this.m42 = m42;
+        this.m43 = m43;
+        this.m44 = m44;
+        return this;
+    }
+    LoadIdentity() {
+        return this.LoadMatrix(Matrix4.makeIdentity());
+    }
+    Translate(x, y, z) {
+        return this.MultMatrix(Matrix4.makeTranslation(x, y, z));
+    }
+    Rotate(angleInDegrees, x, y, z) {
+        return this.MultMatrix(Matrix4.makeRotation(angleInDegrees, x, y, z));
+    }
+    Scale(sx, sy, sz) {
+        return this.MultMatrix(Matrix4.makeScale(sx, sy, sz));
+    }
+    LookAt(eye, center, up) {
+        return this.MultMatrix(Matrix4.makeLookAt(eye, center, up));
+    }
+    Frustum(left, right, bottom, top, near, far) {
+        return this.MultMatrix(Matrix4.makeFrustum(left, right, bottom, top, near, far));
+    }
+    Ortho(left, right, bottom, top, near, far) {
+        return this.MultMatrix(Matrix4.makeOrtho(left, right, bottom, top, near, far));
+    }
+    Ortho2D(left, right, bottom, top) {
+        return this.MultMatrix(Matrix4.makeOrtho2D(left, right, bottom, top));
+    }
+    PerspectiveX(fovx, aspect, near, far) {
+        return this.MultMatrix(Matrix4.makePerspectiveX(fovx, aspect, near, far));
+    }
+    PerspectiveY(fovy, aspect, near, far) {
+        return this.MultMatrix(Matrix4.makePerspectiveY(fovy, aspect, near, far));
+    }
+    ShadowBias() {
+        return this.MultMatrix(Matrix4.makeShadowBias());
+    }
+    CubeFaceMatrix(face) {
+        return this.MultMatrix(Matrix4.makeCubeFaceMatrix(face));
+    }
     static makeIdentity() {
         return new Matrix4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     }
@@ -502,11 +579,11 @@ class Matrix4 {
         var D = -2 * far * near / (far - near);
         return Matrix4.makeRowMajor(2 * near / (right - left), 0, A, 0, 0, 2 * near / (top - bottom), B, 0, 0, 0, C, D, 0, 0, -1, 0);
     }
-    static makePerspective(fovy, aspect, near, far) {
+    static makePerspectiveY(fovy, aspect, near, far) {
         var f = 1.0 / Math.tan(Math.PI * fovy / 360.0);
         return Matrix4.makeRowMajor(f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), 2 * far * near / (near - far), 0, 0, -1, 0);
     }
-    static makePerspectiveY(fovx, aspect, near, far) {
+    static makePerspectiveX(fovx, aspect, near, far) {
         var f = 1.0 / Math.tan(Math.PI * fovx / 360.0);
         return Matrix4.makeRowMajor(f, 0, 0, 0, 0, f * aspect, 0, 0, 0, 0, (far + near) / (near - far), 2 * far * near / (near - far), 0, 0, -1, 0);
     }
@@ -560,7 +637,7 @@ class Matrix4 {
     static multiply(m1, m2) {
         return new Matrix4(m1.m11 * m2.m11 + m1.m21 * m2.m12 + m1.m31 * m2.m13 + m1.m41 * m2.m14, m1.m11 * m2.m21 + m1.m21 * m2.m22 + m1.m31 * m2.m23 + m1.m41 * m2.m24, m1.m11 * m2.m31 + m1.m21 * m2.m32 + m1.m31 * m2.m33 + m1.m41 * m2.m34, m1.m11 * m2.m41 + m1.m21 * m2.m42 + m1.m31 * m2.m43 + m1.m41 * m2.m44, m1.m12 * m2.m11 + m1.m22 * m2.m12 + m1.m32 * m2.m13 + m1.m42 * m2.m14, m1.m12 * m2.m21 + m1.m22 * m2.m22 + m1.m32 * m2.m23 + m1.m42 * m2.m24, m1.m12 * m2.m31 + m1.m22 * m2.m32 + m1.m32 * m2.m33 + m1.m42 * m2.m34, m1.m12 * m2.m41 + m1.m22 * m2.m42 + m1.m32 * m2.m43 + m1.m42 * m2.m44, m1.m13 * m2.m11 + m1.m23 * m2.m12 + m1.m33 * m2.m13 + m1.m43 * m2.m14, m1.m13 * m2.m21 + m1.m23 * m2.m22 + m1.m33 * m2.m23 + m1.m43 * m2.m24, m1.m13 * m2.m31 + m1.m23 * m2.m32 + m1.m33 * m2.m33 + m1.m43 * m2.m34, m1.m13 * m2.m41 + m1.m23 * m2.m42 + m1.m33 * m2.m43 + m1.m43 * m2.m44, m1.m14 * m2.m11 + m1.m24 * m2.m12 + m1.m34 * m2.m13 + m1.m44 * m2.m14, m1.m14 * m2.m21 + m1.m24 * m2.m22 + m1.m34 * m2.m23 + m1.m44 * m2.m24, m1.m14 * m2.m31 + m1.m24 * m2.m32 + m1.m34 * m2.m33 + m1.m44 * m2.m34, m1.m14 * m2.m41 + m1.m24 * m2.m42 + m1.m34 * m2.m43 + m1.m44 * m2.m44);
     }
-    copy(m) {
+    LoadMatrix(m) {
         this.m11 = m.m11;
         this.m21 = m.m21;
         this.m31 = m.m31;
@@ -579,8 +656,8 @@ class Matrix4 {
         this.m44 = m.m44;
         return this;
     }
-    concat(m) {
-        this.copy(Matrix4.multiply(this, m));
+    MultMatrix(m) {
+        this.LoadMatrix(Matrix4.multiply(this, m));
         return this;
     }
     transform(v) {
@@ -1577,67 +1654,261 @@ class Texture {
         }
         return new ImageData(pixels, imageW, imageH);
     }
+    // s and t are between 0 and 1, face is 0 through 5
+    // pos x, neg x, pos y, neg y, pos z, neg z
+    static ConvertCubeUVtoXYZ(face, s, t) {
+        let uc = 2 * s - 1;
+        let vc = 2 * t - 1;
+        let v = new Vector3();
+        switch (face) {
+            case 0:
+                v.x = 1;
+                v.y = vc;
+                v.z = -uc;
+                break; // POSITIVE X
+            case 1:
+                v.x = -1;
+                v.y = vc;
+                v.z = uc;
+                break; // NEGATIVE X
+            case 2:
+                v.x = uc;
+                v.y = 1;
+                v.z = -vc;
+                break; // POSITIVE Y
+            case 3:
+                v.x = uc;
+                v.y = -1;
+                v.z = vc;
+                break; // NEGATIVE Y
+            case 4:
+                v.x = uc;
+                v.y = vc;
+                v.z = 1;
+                break; // POSITIVE Z
+            case 5:
+                v.x = -uc;
+                v.y = vc;
+                v.z = -1;
+                break; // NEGATIVE Z
+        }
+        return v;
+    }
+    static CreatePerlinCube(size, face, blackColor, whiteColor) {
+        const checkerboardImage = new ImageData(new Uint8ClampedArray([
+            ...blackColor,
+            ...whiteColor,
+            ...whiteColor,
+            ...blackColor
+        ]), 2, 2);
+        if (face < 0 || face > 5)
+            return checkerboardImage;
+        if (blackColor.length != 4 && whiteColor.length != 4)
+            return checkerboardImage;
+        let imageW = size;
+        let imageH = size;
+        let pixels = new Uint8ClampedArray(imageW * imageH * 4);
+        let addr = 0;
+        for (let y = 0; y < imageH; y++) {
+            let v = y / (imageH - 1);
+            for (let x = 0; x < imageW; x++) {
+                let u = x / (imageW - 1);
+                let cubeDir = Texture.ConvertCubeUVtoXYZ(face, u, v);
+                let waveletNoise = GTE.WaveletNoise.WaveletNoise(cubeDir.x, cubeDir.y, cubeDir.z);
+                let color = [
+                    GTE.lerp(blackColor[0], whiteColor[0], waveletNoise),
+                    GTE.lerp(blackColor[1], whiteColor[1], waveletNoise),
+                    GTE.lerp(blackColor[2], whiteColor[2], waveletNoise),
+                    255.0
+                ];
+                for (let i = 0; i < 4; i++) {
+                    pixels[addr + i] = GTE.clamp(color[i], 0, 255) | 0;
+                }
+                addr += 4;
+            }
+        }
+        return new ImageData(pixels, imageW, imageH);
+    }
 }
 /// <reference path="./Fluxions.ts" />
 /// <reference path="./RenderConfig.ts" />
 var Utils;
 (function (Utils) {
+    // return last part of the url name ignoring possible ending slash
+    function GetURLResource(url) {
+        let parts = url.split('/');
+        let lastSection = parts.pop() || parts.pop();
+        if (lastSection) {
+            return lastSection;
+        }
+        else {
+            return "unknown";
+        }
+    }
+    Utils.GetURLResource = GetURLResource;
+    function GetURLPath(url) {
+        let resource = GetURLResource(url);
+        let parts = url.split('/');
+        let path = parts.pop() || parts.pop();
+        path = parts.pop() + "/";
+        if (path) {
+            return path;
+        }
+        else {
+            return "";
+        }
+    }
+    Utils.GetURLPath = GetURLPath;
+    function IsExtension(sourceString, extensionWithDot) {
+        let start = sourceString.length - extensionWithDot.length - 1;
+        if (start >= 0 && sourceString.substr(start, extensionWithDot.length) == extensionWithDot) {
+            return true;
+        }
+        return false;
+    }
+    Utils.IsExtension = IsExtension;
+    function GetExtension(sourceString) {
+        let position = sourceString.lastIndexOf(".");
+        if (position >= 0) {
+            return sourceString.substr(position + 1).toLowerCase();
+        }
+        return "";
+    }
+    Utils.GetExtension = GetExtension;
     class ShaderLoader {
-        constructor(rc, vertShaderUrl, fragShaderUrl) {
-            this.rc = rc;
+        constructor(vertShaderUrl, fragShaderUrl, callbackfn) {
             this.vertShaderUrl = vertShaderUrl;
             this.fragShaderUrl = fragShaderUrl;
+            this.callbackfn = callbackfn;
             this.vertLoaded = false;
             this.fragLoaded = false;
+            this.vertFailed = false;
+            this.fragFailed = false;
             this.vertShaderSource = "";
             this.fragShaderSource = "";
             let self = this;
-            let vertAjax = new XMLHttpRequest();
-            vertAjax.addEventListener("load", (e) => {
-                self.vertShaderSource = vertAjax.responseText;
+            let vertXHR = new XMLHttpRequest();
+            vertXHR.addEventListener("load", (e) => {
+                self.vertShaderSource = vertXHR.responseText;
                 self.vertLoaded = true;
-                if (self.vertLoaded && self.fragLoaded) {
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
                 }
             });
-            vertAjax.open("GET", vertShaderUrl);
-            vertAjax.send();
-            let fragAjax = new XMLHttpRequest();
-            fragAjax.addEventListener("load", (e) => {
-                self.fragShaderSource = fragAjax.responseText;
-                self.fragLoaded = true;
-                if (self.vertLoaded && self.fragLoaded)
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+            vertXHR.addEventListener("abort", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
             });
-            fragAjax.open("GET", fragShaderUrl);
-            fragAjax.send();
+            vertXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
+            });
+            vertXHR.open("GET", vertShaderUrl);
+            vertXHR.send();
+            let fragXHR = new XMLHttpRequest();
+            fragXHR.addEventListener("load", (e) => {
+                self.fragShaderSource = fragXHR.responseText;
+                self.fragLoaded = true;
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
+                }
+            });
+            fragXHR.addEventListener("abort", (e) => {
+                self.fragFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            });
+            fragXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            });
+            fragXHR.open("GET", fragShaderUrl);
+            fragXHR.send();
         }
+        get failed() { return this.vertFailed || this.fragFailed; }
+        get loaded() { return this.vertLoaded && this.fragLoaded; }
     }
     Utils.ShaderLoader = ShaderLoader;
     class TextFileLoader {
-        constructor(url, callbackfn) {
+        constructor(url, callbackfn, parameter = 0) {
             this.callbackfn = callbackfn;
-            this.loaded = false;
-            this.error = false;
+            this._loaded = false;
+            this._failed = false;
             this.data = "";
+            this.name = GetURLResource(url);
             let self = this;
-            let ajax = new XMLHttpRequest();
-            ajax.addEventListener("load", (e) => {
-                if (!ajax.responseText) {
-                    self.error = true;
+            let xhr = new XMLHttpRequest();
+            xhr.addEventListener("load", (e) => {
+                if (!xhr.responseText) {
+                    self._failed = true;
                     self.data = "unknown";
                 }
                 else {
-                    self.data = ajax.responseText;
+                    self.data = xhr.responseText;
                 }
-                callbackfn(self.data);
-                self.loaded = true;
+                callbackfn(self.data, self.name, parameter);
+                self._loaded = true;
             });
-            ajax.open("GET", url);
-            ajax.send();
+            xhr.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.open("GET", url);
+            xhr.send();
         }
+        get loaded() { return this._loaded; }
+        get failed() { return this._failed; }
     }
     Utils.TextFileLoader = TextFileLoader;
+    class ImageFileLoader {
+        constructor(url, callbackfn, parameter = 0) {
+            this.callbackfn = callbackfn;
+            this._loaded = false;
+            this._failed = false;
+            this.image = new Image();
+            this.name = GetURLResource(url);
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            this.image.addEventListener("load", (e) => {
+                callbackfn(self.image, this.name, parameter);
+                self._loaded = true;
+            });
+            this.image.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.src = url;
+        }
+        get loaded() { return this._loaded; }
+        get failed() { return this._failed; }
+    }
+    Utils.ImageFileLoader = ImageFileLoader;
+    function SeparateCubeMapImages(image, images) {
+        if (image.width != 6 * image.height) {
+            return;
+        }
+        // images are laid out: +X, -X, +Y, -Y, +Z, -Z
+        let canvas = document.createElement("canvas");
+        if (canvas) {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            let ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.drawImage(image, 0, 0);
+                for (let i = 0; i < 6; i++) {
+                    images[i] = ctx.getImageData(i * image.width, 0, image.width, image.width);
+                }
+            }
+        }
+    }
+    Utils.SeparateCubeMapImages = SeparateCubeMapImages;
     class GLTypeInfo {
         constructor(type, baseType, components, sizeOfType) {
             this.type = type;
@@ -1934,7 +2205,7 @@ class WebGLTest1 {
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(-.2, 0, 0);
         this.Object2Matrix = Matrix4.makeTranslation(.2, 0, 0);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertices = [
             0, 1, 0, 1,
             -1, -1, 0, 1,
@@ -2115,7 +2386,7 @@ void main(void)
         }
         if (loc = this.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspective(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
         let wmloc = this.uniforms.get("WorldMatrix");
@@ -2154,7 +2425,7 @@ class WebGLTest2 {
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(0, 0, 0);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
 uniform mat4 CameraMatrix;
@@ -2241,8 +2512,12 @@ void main(void)
     }
     initShaders(gl) {
         if (this.fluxions) {
+            let self = this;
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
+            this.shaderLoader = new Utils.ShaderLoader("shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig)
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+            });
             //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
         }
         return true;
@@ -2341,7 +2616,7 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
@@ -2373,6 +2648,209 @@ void main(void)
     }
 }
 ;
+/// <reference path="Fluxions.ts" />
+/// <reference path="Utils.ts" />
+var SGAssetType;
+(function (SGAssetType) {
+    SGAssetType[SGAssetType["Scene"] = 0] = "Scene";
+    SGAssetType[SGAssetType["GeometryGroup"] = 1] = "GeometryGroup";
+    SGAssetType[SGAssetType["MaterialLibrary"] = 2] = "MaterialLibrary";
+    SGAssetType[SGAssetType["ShaderProgram"] = 3] = "ShaderProgram";
+    SGAssetType[SGAssetType["Image"] = 4] = "Image";
+})(SGAssetType || (SGAssetType = {}));
+;
+class ScenegraphNode {
+    constructor(name) {
+        this.name = name;
+        this.geometryGroup = "";
+        this.transform = Matrix4.makeIdentity();
+    }
+}
+class Scenegraph {
+    constructor(fluxions) {
+        this.fluxions = fluxions;
+        this.textfiles = [];
+        this.imagefiles = [];
+        this.shaderSrcFiles = [];
+        this._renderConfigs = new Map();
+        this._cubeTextures = new Map();
+        this._textures = new Map();
+        this._nodes = [];
+        this._tempNode = new ScenegraphNode("working");
+    }
+    get percentLoaded() {
+        let a = 0;
+        for (let t of this.textfiles) {
+            if (t.loaded)
+                a++;
+        }
+        for (let i of this.imagefiles) {
+            if (i.loaded)
+                a++;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (s.loaded)
+                a++;
+        }
+        return 100.0 * a / (this.textfiles.length + this.imagefiles.length + this.shaderSrcFiles.length);
+    }
+    Load(url) {
+        let name = Utils.GetURLResource(url);
+        let self = this;
+        let assetType;
+        let ext = Utils.GetExtension(name);
+        let path = Utils.GetURLPath(url);
+        if (ext == "scn")
+            assetType = SGAssetType.Scene;
+        else if (ext == "obj")
+            assetType = SGAssetType.GeometryGroup;
+        else if (ext == "mtl")
+            assetType = SGAssetType.MaterialLibrary;
+        else if (ext == "png")
+            assetType = SGAssetType.Image;
+        else if (ext == "jpg")
+            assetType = SGAssetType.Image;
+        else
+            return;
+        console.log("Scenegraph::Load() => Requesting " + url);
+        if (assetType == SGAssetType.Image) {
+            this.imagefiles.push(new Utils.ImageFileLoader(url, (data, name, assetType) => {
+                console.log("Scenegraph::Load() => Loaded " + name);
+                self.processTextureMap(data, name, assetType);
+                console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+            }));
+        }
+        else {
+            this.textfiles.push(new Utils.TextFileLoader(url, (data, name, assetType) => {
+                console.log("Scenegraph::Load() => Loaded " + name);
+                self.processTextFile(data, name, path, assetType);
+                console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+            }, assetType));
+        }
+    }
+    AddRenderConfig(name, vertshaderUrl, fragshaderUrl) {
+        let self = this;
+        this.shaderSrcFiles.push(new Utils.ShaderLoader(vertshaderUrl, fragshaderUrl, (vertShaderSource, fragShaderSource) => {
+            console.log("Scenegraph::Load() => Loaded " + vertshaderUrl);
+            console.log("Scenegraph::Load() => Loaded " + fragshaderUrl);
+            this._renderConfigs.set(name, self.fluxions.CreateRenderConfig(vertShaderSource, fragShaderSource));
+            console.log("Scenegraph::Load() => done: " + self.percentLoaded + "%");
+        }));
+    }
+    processTextFile(data, name, path, assetType) {
+        // split into lines
+        let lines = data.split("\n");
+        for (let line of lines) {
+            let splittokens = line.split(/\s+/);
+            let tokens = [];
+            for (let t of splittokens) {
+                if (t.length != 0)
+                    tokens.push(t);
+            }
+            // ignore blank lines
+            if (tokens.length == 0) {
+                continue;
+            }
+            // ignore comments
+            if (tokens[0] == '#') {
+                continue;
+            }
+            // console.log(name + ": " + line);
+            switch (assetType) {
+                // ".SCN"
+                case SGAssetType.Scene:
+                    this.processSceneTokens(tokens, path);
+                    break;
+                // ".OBJ"
+                case SGAssetType.GeometryGroup:
+                    this.processGeometryGroupTokens(tokens, path);
+                    break;
+                // ".MTL"
+                case SGAssetType.MaterialLibrary:
+                    console.log("MTLLIB: " + line);
+                    this.processMaterialLibraryTokens(tokens, path);
+                    break;
+            }
+        }
+    }
+    processTextureMap(image, name, assetType) {
+        let gl = this.fluxions.gl;
+        if (image.width = 6 * image.height) {
+            let images = new Array(6);
+            Utils.SeparateCubeMapImages(image, images);
+            let texture = gl.createTexture();
+            if (texture) {
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+                for (let i = 0; i < 6; i++) {
+                    if (!images[i])
+                        continue;
+                    gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[i]);
+                }
+                gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+                this._cubeTextures.set(name, texture);
+            }
+        }
+        else {
+            let texture = gl.createTexture();
+            if (texture) {
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                gl.generateMipmap(gl.TEXTURE_2D);
+                this._textures.set(name, texture);
+            }
+        }
+    }
+    processSceneTokens(tokens, path) {
+        // sundir <direction: Vector3>
+        // camera <eye: Vector3> <center: Vector3> <up: Vector3>
+        // transform <worldMatrix: Matrix4>
+        // geometryGroup <objUrl: string>
+        if (tokens[0] == "geometryGroup") {
+            this.Load(path + tokens[1]);
+        }
+    }
+    processGeometryGroupTokens(tokens, path) {
+        // mtllib <mtlUrl: string>
+        // usemtl <name: string>
+        // v <position: Vector3>
+        // vn <normal: Vector3>
+        // vt <texcoord: Vector2|Vector3>
+        // vc <color: Vector4>
+        // f <v1: number> <v2: number> <v3: number>
+        // f <v1: number>/<vt1:number> <v2: number>/<vt2:number> <v2: number>/<vt2:number>
+        // f <v1: number>//<vt1:number> <v2: number>//<vt2:number> <v2: number>//<vt2:number>
+        // f <v1: number>/<vn1:number>/<vt1:number> <v2: number>/<vn2:number>/<vt2:number> <v2: number>/<vn3:number>/<vt2:number>
+        // o <objectName: string>
+        // g <newSmoothingGroup: string>
+        // s <newSmoothingGroup: string>
+        if (tokens[0] == "mtllib") {
+            this.Load(path + tokens[1]);
+        }
+    }
+    processMaterialLibraryTokens(tokens, path) {
+        // newmtl <name: string>
+        // Kd <color: Vector3>
+        // Ks <color: Vector3>
+        // map_Kd <url: string>
+        // map_Ks <url: string>
+        // map_normal <url: string>
+        if (tokens[0] == "map_Kd") {
+            this.Load(path + tokens[1]);
+        }
+        else if (tokens[0] == "map_Ks") {
+            this.Load(path + tokens[1]);
+        }
+        else if (tokens[0] == "map_normal") {
+            this.Load(path + tokens[1]);
+        }
+        else {
+            console.log("MTLLIB: Ignoring");
+            for (let t of tokens) {
+                console.log("\"" + t + "\"");
+            }
+        }
+    }
+}
 /// <reference path="Vector2.ts" />
 /// <reference path="Vector3.ts" />
 /// <reference path="Vector4.ts" />
@@ -2387,6 +2865,7 @@ void main(void)
 /// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
 /// <reference path="Utils.ts" />
+/// <reference path="Scenegraph.ts" />
 class Fluxions {
     constructor(gl) {
         this.gl = gl;
@@ -2495,12 +2974,170 @@ var WebGLTemplate;
                 ctx._hasDepthTexture = true;
                 ctx._hasTextureFloat = true;
                 ctx._hasElementIndexUint = true;
+                console.log("standard derivatives, depth texture, texture float, and element index uint supported");
             }
             return ctx;
         }
     }
     WebGLTemplate.Context = Context;
 })(WebGLTemplate || (WebGLTemplate = {}));
+var GTE;
+(function (GTE) {
+    function clamp(x, a, b) {
+        return x < a ? a : x > b ? b : x;
+    }
+    GTE.clamp = clamp;
+    // 0 <= mix <= 1
+    function lerp(a, b, mix) {
+        return mix * a + (1 - mix) * b;
+    }
+    GTE.lerp = lerp;
+    class WaveletNoiseCalculator {
+        constructor(noiseTileSize = 128) {
+            this.noiseTileSize = noiseTileSize;
+            this.initialized = false;
+            this.noiseTileData = new Float32Array(noiseTileSize * noiseTileSize * noiseTileSize);
+            this.GenerateNoiseTile(noiseTileSize);
+        }
+        Mod(x, n) {
+            let m = x % n;
+            return m < 0 ? m + n : m;
+        }
+        Downsample(from, to, n, stride) {
+            const ARAD = 16;
+            let coefs = new Float32Array([
+                0.000334, -0.001528, 0.000410, 0.003545, -0.000938, -0.008233, 0.002172, 0.019120,
+                -0.005040, -0.044412, 0.011655, 0.103311, -0.025936, -0.243780, 0.033979, 0.655340,
+                0.655340, 0.033979, -0.243780, -0.025936, 0.103311, 0.011655, -0.044412, -0.005040,
+                0.019120, 0.002172, -0.008233, -0.000938, 0.003546, 0.000410, -0.001528, 0.000334,
+                0
+            ]);
+            let a = coefs.subarray(ARAD);
+            for (let i = 0; i < ((n / 2) | 0); i++) {
+                to[i * stride] = 0;
+                for (let k = 2 * i - ARAD; k <= 2 * i + ARAD; k++) {
+                    let _a = coefs[ARAD + k - 2 * i];
+                    to[i * stride] += _a * from[this.Mod(k, n) * stride];
+                    if (!isFinite(to[i * stride])) {
+                        console.error("non finite number produced");
+                    }
+                }
+            }
+        }
+        Upsample(from, to, n, stride) {
+            const ARAD = 16;
+            let pCoefs = new Float32Array([0.25, 0.75, 0.75, 0.25]);
+            let p = pCoefs.subarray(2);
+            for (let i = 0; i < n; i++) {
+                to[i * stride] = 0;
+                let k1 = (i / 2) | 0;
+                let k2 = k1 + 1;
+                for (let k = k1; k <= k2; k++) {
+                    let _p = pCoefs[2 + i - 2 * k];
+                    to[i * stride] += _p * from[this.Mod(k, n / 2) * stride];
+                    if (!isFinite(to[i * stride])) {
+                        console.error("non finite number produced");
+                    }
+                }
+            }
+        }
+        GenerateNoiseTile(n) {
+            if (n % 2) {
+                n++;
+            }
+            let ix = 0;
+            let iy = 0;
+            let iz = 0;
+            let sz = n * n * n * 4;
+            let temp1 = new Float32Array(n * n * n);
+            let temp2 = new Float32Array(n * n * n);
+            let noise = new Float32Array(n * n * n);
+            for (let i = 0; i < n * n * n; i++) {
+                // Wavelet noise paper says "GaussianNoise"
+                noise[i] = Math.random() * 2 - 1;
+            }
+            // Downsample and upsample
+            for (iy = 0; iy < n; iy++) {
+                for (iz = 0; iz < n; iz++) {
+                    let i = iy * n + iz * n * n;
+                    this.Downsample(noise.subarray(i), temp1.subarray(i), n, 1);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, 1);
+                }
+            }
+            for (ix = 0; ix < n; ix++) {
+                for (iz = 0; iz < n; iz++) {
+                    let i = ix + iz * n * n;
+                    this.Downsample(temp2.subarray(i), temp1.subarray(i), n, n);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, n);
+                }
+            }
+            for (ix = 0; ix < n; ix++) {
+                for (iy = 0; iy < n; iy++) {
+                    let i = ix + iy * n;
+                    this.Downsample(temp2.subarray(i), temp1.subarray(i), n, n * n);
+                    this.Upsample(temp1.subarray(i), temp2.subarray(i), n, n * n);
+                }
+            }
+            for (let i = 0; i < n * n * n; i++) {
+                noise[i] -= temp2[i];
+            }
+            let offset = n / 2;
+            if (offset % 2) {
+                offset++;
+            }
+            for (let i = 0, ix = 0; ix < n; ix++) {
+                for (iy = 0; iy < n; iy++) {
+                    for (iz = 0; iz < n; iz++) {
+                        temp1[i++] = noise[this.Mod(ix + offset, n) + this.Mod(iy + offset, n) * n + this.Mod(iz + offset, n) * n * n];
+                    }
+                }
+            }
+            for (let i = 0; i < n * n * n; i++) {
+                noise[i] += temp1[i];
+            }
+            this.noiseTileData = noise;
+            this.initialized = true;
+        }
+        WaveletNoise(x, y, z, octave = 128) {
+            let p = [octave * x, octave * y, octave * z];
+            let i = 0;
+            let f = [0, 0, 0];
+            let c = [0, 0, 0];
+            let n = this.noiseTileSize;
+            let mid = [0, 0, 0];
+            let w = [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ];
+            let t = 0;
+            let result = 0;
+            // B-spline quadratic basis function
+            for (i = 0; i < 3; i++) {
+                mid[i] = Math.ceil(p[i] - 0.5);
+                t = mid[i] - (p[i] - 0.5);
+                w[i][0] = t * t / 2;
+                w[i][2] = (1 - t) * (1 - t) / 2;
+                w[i][1] = 1 - w[i][0] - w[i][2];
+            }
+            for (f[2] = -1; f[2] <= 1; f[2]++) {
+                for (f[1] = -1; f[1] <= 1; f[1]++) {
+                    for (f[0] = -1; f[0] <= 1; f[0]++) {
+                        let weight = 1;
+                        for (i = 0; i < 3; i++) {
+                            c[i] = this.Mod(mid[i] + f[i], n);
+                            weight *= w[i][f[i] + 1];
+                            result += weight * this.noiseTileData[c[2] * n * n + c[1] * n + c[0]];
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+    GTE.WaveletNoiseCalculator = WaveletNoiseCalculator;
+    GTE.WaveletNoise = new WaveletNoiseCalculator(64);
+})(GTE || (GTE = {}));
 /// <reference path="Fluxions.ts" />
 /// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
@@ -2515,11 +3152,13 @@ class WebGLTest3 {
         // Original properties
         this.texture2D = null;
         this.textureCM = null;
+        this.textureCubePerlin = null;
+        this.texturePerlin = null;
         this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
         this.WorldMatrix = Matrix4.makeIdentity();
         this.Object1Matrix = Matrix4.makeTranslation(0, -0.5, 0);
         this.Object2Matrix = Matrix4.makeTranslation(.2, 0, -5);
-        this.ProjectionMatrix = Matrix4.makePerspective(45, 1, 0.1, 100.0);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
         this.vertShaderSource = `
 uniform mat4 WorldMatrix;
 uniform mat4 CameraMatrix;
@@ -2602,13 +3241,25 @@ void main(void)
             gl.deleteTexture(this.textureCM);
             this.textureCM = null;
         }
+        if (this.textureCubePerlin) {
+            gl.deleteTexture(this.textureCubePerlin);
+            this.textureCubePerlin = null;
+        }
+        if (this.texturePerlin) {
+            gl.deleteTexture(this.texturePerlin);
+            this.texturePerlin = null;
+        }
         this.fluxions = null;
     }
     initShaders(gl) {
         if (this.fluxions) {
+            let self = this;
             this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
-            //this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/fullscreenquad.vert", "shaders/fullscreenquad.frag");
-            this.shaderLoader = new Utils.ShaderLoader(this.renderConfig, "shaders/pbr.vert", "shaders/pbr.frag");
+            this.shaderLoader = new Utils.ShaderLoader("shaders/pbr.vert", "shaders/pbr.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig) {
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+                }
+            });
         }
         return true;
     }
@@ -2616,22 +3267,22 @@ void main(void)
         if (!this.fluxions)
             return false;
         this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
-        this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
-        this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
-        this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
-        this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
-        this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
-        this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
-        this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
-        this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
-        this.geometryMesh.BeginSurface(gl.TRIANGLES);
-        this.geometryMesh.AddIndex(0);
-        this.geometryMesh.AddIndex(1);
-        this.geometryMesh.AddIndex(2);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(0);
+        // this.geometryMesh.AddIndex(1);
+        // this.geometryMesh.AddIndex(2);
         this.geometryMesh.LoadObject("assets/teapot.obj");
-        let x = 2.0 * 640 / 384;
+        let x = 2.0; // * 640 / 384;
         let y = 2.0;
         this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
         this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
@@ -2644,10 +3295,10 @@ void main(void)
         this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
         this.geometryMesh.VertexAttrib2(0, -x, -y);
         this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
-        this.geometryMesh.AddIndex(3);
-        this.geometryMesh.AddIndex(4);
-        this.geometryMesh.AddIndex(5);
-        this.geometryMesh.AddIndex(6);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing buffers");
             return false;
@@ -2682,6 +3333,24 @@ void main(void)
         }
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        this.textureCubePerlin = gl.createTexture();
+        if (this.textureCubePerlin) {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+            for (let i = 0; i < 6; i++) {
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(128, i, cubeColorsDark[i], cubeColorsLight[i]));
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+        this.texturePerlin = gl.createTexture();
+        if (this.texturePerlin) {
+            gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(32, 4, Colors.Blue, Colors.Green));
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
         if (gl.getError() != gl.NO_ERROR) {
             console.error("Error initializing textures");
             return false;
@@ -2698,8 +3367,17 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
         let loc;
         if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            this.CameraMatrix.LoadIdentity();
+            //this.CameraMatrix.Translate(0.0, 0.0, -5.0);
+            this.CameraMatrix.Rotate(10.0 * timeInSeconds, 0.0, 1.0, 0.0);
+            this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 1.0, 0.0, 0.0);
+            this.CameraMatrix.Translate(0.0, 0.0, -10.0);
             gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
         }
         if (loc = this.renderConfig.uniforms.get("LightDir")) {
@@ -2707,7 +3385,7 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
             let aspect = gl.canvas.width / gl.canvas.height;
-            this.ProjectionMatrix = Matrix4.makePerspectiveY(45, aspect, 0.1, 100.0);
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
             //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
             gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
         }
@@ -2716,6 +3394,12 @@ void main(void)
         }
         if (loc = this.renderConfig.uniforms.get("TextureCube")) {
             gl.uniform1i(loc, 1);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCubePerlin")) {
+            gl.uniform1i(loc, 2);
+        }
+        if (loc = this.renderConfig.uniforms.get("TexturePerlin")) {
+            gl.uniform1i(loc, 3);
         }
         let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
         if (wmloc) {
@@ -2730,6 +3414,10 @@ void main(void)
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, null);
         gl.activeTexture(gl.TEXTURE0);
         gl.useProgram(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -2739,3 +3427,296 @@ void main(void)
     }
 }
 ;
+/// <reference path="Fluxions.ts" />
+/// <reference path="Colors.ts" />
+/// <reference path="IndexedGeometryMesh.ts" />
+class WebGLTest4 {
+    constructor() {
+        // New properties
+        this.fluxions = null;
+        this.renderConfig = null;
+        this.geometryMesh = null;
+        this.initialized = false;
+        this.shaderLoader = null;
+        // Original properties
+        this.texture2D = null;
+        this.textureCM = null;
+        this.textureCubePerlin = null;
+        this.texturePerlin = null;
+        this.CameraMatrix = Matrix4.makeLookAt(new Vector3(0, 0, 10), new Vector3(), new Vector3(0, 1, 0));
+        this.WorldMatrix = Matrix4.makeIdentity();
+        this.Object1Matrix = Matrix4.makeTranslation(0, -0.5, 0);
+        this.Object2Matrix = Matrix4.makeTranslation(.2, 0, -5);
+        this.ProjectionMatrix = Matrix4.makePerspectiveY(45, 1, 0.1, 100.0);
+        this.vertShaderSource = `
+uniform mat4 WorldMatrix;
+uniform mat4 CameraMatrix;
+uniform mat4 ProjectionMatrix;
+
+attribute vec4 aPosition;
+attribute vec3 aNormal;
+attribute vec4 aColor;
+attribute vec4 aTexCoord;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    VS_Position = WorldMatrix * aPosition;
+    VS_CameraDir = CameraMatrix[3].xyz - VS_Position.xyz;
+    VS_Normal = aNormal;
+    VS_Color = aColor;
+    VS_TexCoord = aTexCoord;
+    gl_Position = ProjectionMatrix * CameraMatrix * WorldMatrix * aPosition;
+}
+        `;
+        this.fragShaderSource = `
+precision mediump float;
+
+uniform float timer;
+uniform vec2  mouse;
+uniform vec3  LightDir;
+
+uniform sampler2D Texture2D;
+uniform samplerCube TextureCube;
+
+varying vec4 VS_Position;
+varying vec3 VS_Normal;
+varying vec4 VS_Color;
+varying vec4 VS_TexCoord;
+varying vec3 VS_CameraDir;
+
+void main(void)
+{
+    vec3 V = normalize(VS_CameraDir);
+    vec3 L = normalize (LightDir);
+    vec3 N = normalize (VS_Normal);
+    float NdotL = max(0.0, dot(N, L));
+    gl_FragColor = NdotL * vec4(VS_Color.rgb,1.0);//vec4(1.0,1.0,1.0,1.0) * NdotL;// + texture2D(Texture2D, VS_TexCoord.st);
+    gl_FragColor = textureCube(TextureCube, vec3(-1.0, VS_TexCoord.s, VS_TexCoord.t));
+    gl_FragColor = texture2D(Texture2D, VS_TexCoord.st);
+}
+        `;
+    }
+    test(gl, timeInSeconds) {
+        if (!this.fluxions) {
+            this.fluxions = new Fluxions(gl);
+            this.scenegraph = new Scenegraph(this.fluxions);
+            this.scenegraph.AddRenderConfig("pbr", "shaders/pbr.vert", "shaders/pbr.frag");
+            this.scenegraph.Load("assets/testscene.scn");
+            if (!this.initShaders(gl)) {
+                this.kill(gl);
+                return false;
+            }
+            if (!this.initBuffers(gl)) {
+                this.kill(gl);
+                return false;
+            }
+        }
+        if (!this.drawScene(gl, timeInSeconds)) {
+            this.kill(gl);
+            return false;
+        }
+        //this.kill(gl);
+        return true;
+    }
+    kill(gl) {
+        if (this.texture2D) {
+            gl.deleteTexture(this.texture2D);
+            this.texture2D = null;
+        }
+        if (this.textureCM) {
+            gl.deleteTexture(this.textureCM);
+            this.textureCM = null;
+        }
+        if (this.textureCubePerlin) {
+            gl.deleteTexture(this.textureCubePerlin);
+            this.textureCubePerlin = null;
+        }
+        if (this.texturePerlin) {
+            gl.deleteTexture(this.texturePerlin);
+            this.texturePerlin = null;
+        }
+        this.fluxions = null;
+    }
+    initShaders(gl) {
+        if (this.fluxions) {
+            let self = this;
+            this.renderConfig = this.fluxions.CreateRenderConfig(this.vertShaderSource, this.fragShaderSource);
+            this.shaderLoader = new Utils.ShaderLoader("shaders/pbr.vert", "shaders/pbr.frag", (vsSrc, fsSrc) => {
+                if (self.renderConfig) {
+                    self.renderConfig.Reset(vsSrc, fsSrc);
+                }
+            });
+        }
+        return true;
+    }
+    initBuffers(gl) {
+        if (!this.fluxions)
+            return false;
+        this.geometryMesh = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
+        // this.geometryMesh.VertexAttrib3(1, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib3(2, 0, 1, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0.5, 1, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 0, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 0, 1);
+        // this.geometryMesh.VertexAttrib4(3, 0, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, -1, -1, 0, 1);
+        // this.geometryMesh.VertexAttrib3(2, 1, 1, 0);
+        // this.geometryMesh.VertexAttrib4(3, 1, 0, 0, 0);
+        // this.geometryMesh.VertexAttrib4(0, 1, -1, 0, 1);
+        // this.geometryMesh.BeginSurface(gl.TRIANGLES);
+        // this.geometryMesh.AddIndex(0);
+        // this.geometryMesh.AddIndex(1);
+        // this.geometryMesh.AddIndex(2);
+        this.geometryMesh.LoadObject("assets/teapot.obj");
+        let x = 2.0; // * 640 / 384;
+        let y = 2.0;
+        this.geometryMesh.VertexAttrib3(1, 0.0, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib3(1, 1.0, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, -x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 0.0);
+        this.geometryMesh.VertexAttrib2(0, x, y);
+        this.geometryMesh.VertexAttrib2(3, 1.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, x, -y);
+        this.geometryMesh.VertexAttrib2(3, 0.0, 1.0);
+        this.geometryMesh.VertexAttrib2(0, -x, -y);
+        this.geometryMesh.BeginSurface(gl.TRIANGLE_FAN);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        this.geometryMesh.AddIndex(-1);
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing buffers");
+            return false;
+        }
+        const cubeColorsLight = [
+            Colors.LightRed,
+            Colors.LightCyan,
+            Colors.LightGreen,
+            Colors.LightMagenta,
+            Colors.LightBlue,
+            Colors.LightYellow
+        ];
+        const cubeColorsDark = [
+            Colors.DarkRed,
+            Colors.DarkCyan,
+            Colors.DarkGreen,
+            Colors.DarkMagenta,
+            Colors.DarkBlue,
+            Colors.DarkYellow
+        ];
+        this.texture2D = gl.createTexture();
+        this.textureCM = gl.createTexture();
+        if (!this.texture2D || !this.textureCM)
+            return false;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, Colors.Blue, Colors.Yellow));
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        for (let i = 0; i < 6; i++) {
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreateCheckerBoard(8, 8, 8, cubeColorsDark[i], cubeColorsLight[i]));
+        }
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        this.textureCubePerlin = gl.createTexture();
+        if (this.textureCubePerlin) {
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+            for (let i = 0; i < 6; i++) {
+                gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(128, i, cubeColorsDark[i], cubeColorsLight[i]));
+            }
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+        this.texturePerlin = gl.createTexture();
+        if (this.texturePerlin) {
+            gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, Texture.CreatePerlinCube(32, 4, Colors.Blue, Colors.Green));
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+        if (gl.getError() != gl.NO_ERROR) {
+            console.error("Error initializing textures");
+            return false;
+        }
+        return true;
+    }
+    drawScene(gl, timeInSeconds) {
+        if (!this.renderConfig)
+            return false;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.enable(gl.DEPTH_TEST);
+        this.renderConfig.Use();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture2D);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCM);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.textureCubePerlin);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.texturePerlin);
+        let loc;
+        if (loc = this.renderConfig.uniforms.get("CameraMatrix")) {
+            this.CameraMatrix.LoadIdentity();
+            //this.CameraMatrix.Translate(0.0, 0.0, -5.0);
+            this.CameraMatrix.Rotate(10.0 * timeInSeconds, 0.0, 1.0, 0.0);
+            this.CameraMatrix.Rotate(10.0 * Math.sin(timeInSeconds), 1.0, 0.0, 0.0);
+            this.CameraMatrix.Translate(0.0, 0.0, -10.0);
+            gl.uniformMatrix4fv(loc, false, this.CameraMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("LightDir")) {
+            gl.uniform3fv(loc, new Vector3(0.25, 0.25, 1.0).toFloat32Array());
+        }
+        if (loc = this.renderConfig.uniforms.get("ProjectionMatrix")) {
+            let aspect = gl.canvas.width / gl.canvas.height;
+            this.ProjectionMatrix = Matrix4.makePerspectiveX(45, aspect, 0.1, 100.0);
+            //this.ProjectionMatrix = Matrix4.makeOrtho2D(-aspect, aspect, -1.0, 1.0);
+            gl.uniformMatrix4fv(loc, false, this.ProjectionMatrix.asColMajorArray());
+        }
+        if (loc = this.renderConfig.uniforms.get("Texture2D")) {
+            gl.uniform1i(loc, 0);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCube")) {
+            gl.uniform1i(loc, 1);
+        }
+        if (loc = this.renderConfig.uniforms.get("TextureCubePerlin")) {
+            gl.uniform1i(loc, 2);
+        }
+        if (loc = this.renderConfig.uniforms.get("TexturePerlin")) {
+            gl.uniform1i(loc, 3);
+        }
+        let wmloc = this.renderConfig.uniforms.get("WorldMatrix");
+        if (wmloc) {
+            let matRotate = Matrix4.multiply(this.Object1Matrix, Matrix4.makeRotation(5 * timeInSeconds, 0, 1, 0));
+            let matrix = matRotate.asColMajorArray();
+            gl.uniformMatrix4fv(wmloc, false, matrix);
+        }
+        if (this.geometryMesh && this.renderConfig) {
+            this.geometryMesh.Render(this.renderConfig);
+        }
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.useProgram(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.disable(gl.DEPTH_TEST);
+        return true;
+    }
+}
+;
+//# sourceMappingURL=webgl-template.js.map

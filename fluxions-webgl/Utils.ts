@@ -2,57 +2,182 @@
 /// <reference path="./RenderConfig.ts" />
 
 namespace Utils {
+    // return last part of the url name ignoring possible ending slash
+    export function GetURLResource(url: string): string {
+        let parts = url.split('/');
+        let lastSection = parts.pop() || parts.pop();
+        if (lastSection) {
+            return lastSection;
+        }
+        else {
+            return "unknown";
+        }
+    }
+
+    export function GetURLPath(url: string): string {
+        let resource = GetURLResource(url);
+        let parts = url.split('/');
+        let path = parts.pop() || parts.pop();
+        path = parts.pop() + "/";
+        if (path) {
+            return path;
+        }
+        else {
+            return "";
+        }
+    }
+
+    export function IsExtension(sourceString: string, extensionWithDot: string): boolean {
+        let start = sourceString.length - extensionWithDot.length - 1;
+        if (start >= 0 && sourceString.substr(start, extensionWithDot.length) == extensionWithDot) {
+            return true;
+        }
+        return false;
+    }
+
+    export function GetExtension(sourceString: string): string {
+        let position = sourceString.lastIndexOf(".");
+        if (position >= 0) {
+            return sourceString.substr(position + 1).toLowerCase();
+        }
+        return "";
+    }
+
     export class ShaderLoader {
         private vertLoaded: boolean = false;
         private fragLoaded: boolean = false;
-        private vertShaderSource: string = "";
-        private fragShaderSource: string = "";
-        constructor(public rc: RenderConfig, public vertShaderUrl: string, public fragShaderUrl: string) {
+        private vertFailed: boolean = false;
+        private fragFailed: boolean = false;
+        public vertShaderSource: string = "";
+        public fragShaderSource: string = "";
+
+        get failed(): boolean { return this.vertFailed || this.fragFailed; }
+        get loaded(): boolean { return this.vertLoaded && this.fragLoaded; }
+
+        constructor(public vertShaderUrl: string, public fragShaderUrl: string, private callbackfn: (vertShaderSource: string, fragShaderSource: string) => void) {
             let self = this;
-            let vertAjax: XMLHttpRequest = new XMLHttpRequest();
-            vertAjax.addEventListener("load", (e) => {
-                self.vertShaderSource = vertAjax.responseText;
+            let vertXHR: XMLHttpRequest = new XMLHttpRequest();
+            vertXHR.addEventListener("load", (e) => {
+                self.vertShaderSource = vertXHR.responseText;
                 self.vertLoaded = true;
-                if (self.vertLoaded && self.fragLoaded) {
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
                 }
             });
-            vertAjax.open("GET", vertShaderUrl);
-            vertAjax.send();
-
-            let fragAjax: XMLHttpRequest = new XMLHttpRequest();
-            fragAjax.addEventListener("load", (e) => {
-                self.fragShaderSource = fragAjax.responseText;
-                self.fragLoaded = true;
-                if (self.vertLoaded && self.fragLoaded)
-                    self.rc.Reset(self.vertShaderSource, self.fragShaderSource);
+            vertXHR.addEventListener("abort", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
             });
-            fragAjax.open("GET", fragShaderUrl);
-            fragAjax.send();
+            vertXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + vertShaderUrl);
+            })
+            vertXHR.open("GET", vertShaderUrl);
+            vertXHR.send();
+
+            let fragXHR: XMLHttpRequest = new XMLHttpRequest();
+            fragXHR.addEventListener("load", (e) => {
+                self.fragShaderSource = fragXHR.responseText;
+                self.fragLoaded = true;
+                if (this.loaded) {
+                    self.callbackfn(self.vertShaderSource, self.fragShaderSource);
+                }
+            });
+            fragXHR.addEventListener("abort", (e) => {
+                self.fragFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            })
+            fragXHR.addEventListener("error", (e) => {
+                self.vertFailed = true;
+                console.error("unable to GET " + fragShaderUrl);
+            })
+            fragXHR.open("GET", fragShaderUrl);
+            fragXHR.send();
         }
     }
 
     export class TextFileLoader {
-        public loaded: boolean = false;
-        public error: boolean = false;
+        private _loaded: boolean = false;
+        private _failed: boolean = false;
         public data: string = "";
+        public name: string;
+        get loaded(): boolean { return this._loaded; }
+        get failed(): boolean { return this._failed; }
 
-        constructor(url: string, private callbackfn: (data: string) => void) {
+        constructor(url: string, private callbackfn: (data: string, name: string, parameter: number) => void, parameter: number = 0) {
+            this.name = GetURLResource(url);
             let self = this;
-            let ajax = new XMLHttpRequest();
-            ajax.addEventListener("load", (e) => {
-                if (!ajax.responseText) {
-                    self.error = true;
+            let xhr = new XMLHttpRequest();
+            xhr.addEventListener("load", (e) => {
+                if (!xhr.responseText) {
+                    self._failed = true;
                     self.data = "unknown";
                 }
                 else {
-                    self.data = ajax.responseText;
+                    self.data = xhr.responseText;
                 }
-                callbackfn(self.data);
-                self.loaded = true;
+                callbackfn(self.data, self.name, parameter);
+                self._loaded = true;
             });
-            ajax.open("GET", url);
-            ajax.send();
+            xhr.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            xhr.open("GET", url);
+            xhr.send();
+        }
+    }
+
+    export class ImageFileLoader {
+        private _loaded: boolean = false;
+        private _failed: boolean = false;
+        public image: HTMLImageElement = new Image();
+        public name: string;
+        get loaded(): boolean { return this._loaded; }
+        get failed(): boolean { return this._failed; }
+
+        constructor(url: string, private callbackfn: (data: HTMLImageElement, name: string, parameter: number) => void, parameter: number = 0) {
+            this.name = GetURLResource(url);
+            let self = this;
+            let ajax = new XMLHttpRequest();
+            this.image.addEventListener("load", (e) => {
+                callbackfn(self.image, this.name, parameter);
+                self._loaded = true;
+            });
+            this.image.addEventListener("error", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.addEventListener("abort", (e) => {
+                self._failed = true;
+                console.error("unable to GET " + url);
+            });
+            this.image.src = url;
+        }
+    }
+
+    export function SeparateCubeMapImages(image: HTMLImageElement, images: null[] | ImageData[]): void {
+        if (image.width != 6 * image.height) {
+            return;
+        }
+
+        // images are laid out: +X, -X, +Y, -Y, +Z, -Z
+        let canvas = document.createElement("canvas");
+        if (canvas) {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            let ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.drawImage(image, 0, 0);
+
+                for (let i = 0; i < 6; i++) {
+                    images[i] = ctx.getImageData(i * image.width, 0, image.width, image.width);
+                }
+            }
         }
     }
 

@@ -2,13 +2,14 @@
 /// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />
 
-class WebGLTest3 {
+class WebGLTest4 {
     // New properties
     fluxions: Fluxions | null = null;
     renderConfig: RenderConfig | null = null;
     geometryMesh: IndexedGeometryMesh | null = null;
     initialized: boolean = false;
     shaderLoader: Utils.ShaderLoader | null = null;
+    scenegraph?: Scenegraph;
 
     // Original properties
     texture2D: WebGLTexture | null = null;
@@ -82,6 +83,9 @@ void main(void)
     test(gl: WebGLRenderingContext, timeInSeconds: number): boolean {
         if (!this.fluxions) {
             this.fluxions = new Fluxions(gl);
+            this.scenegraph = new Scenegraph(this.fluxions);
+            this.scenegraph.AddRenderConfig("pbr", "shaders/pbr.vert", "shaders/pbr.frag");
+            this.scenegraph.Load("assets/testscene.scn");
 
             if (!this.initShaders(gl)) {
                 this.kill(gl);

@@ -12,6 +12,7 @@
 /// <reference path="WebGLTest1.ts" />
 /// <reference path="WebGLTest2.ts" />
 /// <reference path="Utils.ts" />
+/// <reference path="Scenegraph.ts" />
 
 class Fluxions {
     constructor(public gl: WebGLRenderingContext) {
