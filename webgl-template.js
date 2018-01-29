@@ -2677,6 +2677,7 @@ class Scenegraph {
         this._textures = new Map();
         this._nodes = [];
         this._tempNode = new ScenegraphNode("working");
+        this._vbo = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
     }
     get percentLoaded() {
         let a = 0;
@@ -2693,6 +2694,36 @@ class Scenegraph {
                 a++;
         }
         return 100.0 * a / (this.textfiles.length + this.imagefiles.length + this.shaderSrcFiles.length);
+    }
+    get loaded() {
+        for (let t of this.textfiles) {
+            if (!t.loaded)
+                return false;
+        }
+        for (let i of this.imagefiles) {
+            if (!i.loaded)
+                return false;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (!s.loaded)
+                return false;
+        }
+        return true;
+    }
+    get failed() {
+        for (let t of this.textfiles) {
+            if (t.failed)
+                return true;
+        }
+        for (let i of this.imagefiles) {
+            if (i.failed)
+                return true;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (s.failed)
+                return true;
+        }
+        return this.false;
     }
     Load(url) {
         let name = Utils.GetURLResource(url);
@@ -2738,8 +2769,34 @@ class Scenegraph {
         }));
     }
     processTextFile(data, name, path, assetType) {
+        let tp = new TextParser(data);
+        if (assetType == SGAssetType.GeometryGroup) {
+            let icount = 10;
+            let vcount = 10;
+            for (let line of tp.lines) {
+                //console.log("TP: " + line);
+                if (line.length >= 4) {
+                    if (line[0] == "f" && icount >= 0) {
+                        icount--;
+                        let indices = TextParser.ParseFace(line);
+                        console.log(indices);
+                    }
+                    else if (line[0] == "v" && vcount >= 0) {
+                        vcount--;
+                        let vertex = TextParser.ParseVector(line);
+                        console.log(vertex);
+                    }
+                }
+                else if (line.length >= 2) {
+                    if (line[0] == "usemtl") {
+                        console.log("using mtl " + TextParser.ParseIdentifier(line));
+                    }
+                }
+            }
+            console.log("done!");
+        }
         // split into lines
-        let lines = data.split("\n");
+        let lines = data.split(/[\r\n]+/);
         for (let line of lines) {
             let splittokens = line.split(/\s+/);
             let tokens = [];
@@ -2767,7 +2824,6 @@ class Scenegraph {
                     break;
                 // ".MTL"
                 case SGAssetType.MaterialLibrary:
-                    console.log("MTLLIB: " + line);
                     this.processMaterialLibraryTokens(tokens, path);
                     break;
             }
@@ -3138,6 +3194,64 @@ var GTE;
     GTE.WaveletNoiseCalculator = WaveletNoiseCalculator;
     GTE.WaveletNoise = new WaveletNoiseCalculator(64);
 })(GTE || (GTE = {}));
+class TextParser {
+    constructor(_data) {
+        this._data = _data;
+        this.lines = [];
+        // split into lines
+        let lines = this._data.split(/[\r\n]+/);
+        for (let line of lines) {
+            let splittokens = line.split(/\s+/);
+            let tokens = [];
+            for (let t of splittokens) {
+                if (t.length != 0)
+                    tokens.push(t);
+            }
+            // ignore blank lines
+            if (tokens.length == 0) {
+                continue;
+            }
+            // ignore comments
+            if (tokens[0] == '#') {
+                continue;
+            }
+            this.lines.push(tokens);
+        }
+    }
+    static ParseVector(line) {
+        let x = (line.length >= 2) ? parseFloat(line[1]) : 0.0;
+        let y = (line.length >= 3) ? parseFloat(line[2]) : 0.0;
+        let z = (line.length >= 4) ? parseFloat(line[3]) : 0.0;
+        return new Vector3(x, y, z);
+    }
+    static ParseFaceIndices(token) {
+        let indices = [0, 0, 0];
+        let values = token.split("/");
+        if (values.length >= 1) {
+            indices[0] = parseInt(values[0]);
+        }
+        if (values.length == 2) {
+            indices[2] = parseInt(values[1]);
+        }
+        else if (values.length == 3) {
+            indices[1] = parseInt(values[1]);
+            indices[2] = parseInt(values[2]);
+        }
+        return indices;
+    }
+    static ParseFace(tokens) {
+        let v1 = TextParser.ParseFaceIndices(tokens[1]);
+        let v2 = TextParser.ParseFaceIndices(tokens[2]);
+        let v3 = TextParser.ParseFaceIndices(tokens[3]);
+        let indices = [...v1, ...v2, ...v3];
+        return indices;
+    }
+    static ParseIdentifier(tokens) {
+        tokens.shift();
+        let name = tokens.join('_').replace(/[^\w]/, "_");
+        return name;
+    }
+}
 /// <reference path="Fluxions.ts" />
 /// <reference path="Colors.ts" />
 /// <reference path="IndexedGeometryMesh.ts" />

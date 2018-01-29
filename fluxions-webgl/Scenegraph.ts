@@ -25,8 +25,13 @@ class Scenegraph {
     private _renderConfigs: Map<string, RenderConfig> = new Map<string, RenderConfig>();
     private _cubeTextures: Map<string, WebGLTexture> = new Map<string, WebGLTexture>();
     private _textures: Map<string, WebGLTexture> = new Map<string, WebGLTexture>();
+    private _vbo: IndexedGeometryMesh;
     private _nodes: Array<ScenegraphNode> = [];
     private _tempNode: ScenegraphNode = new ScenegraphNode("working");
+
+    constructor(private fluxions: Fluxions) {
+        this._vbo = new IndexedGeometryMesh(this.fluxions, 1048576, 1048576);
+    }
 
     get percentLoaded(): number {
         let a = 0;
@@ -42,7 +47,30 @@ class Scenegraph {
         return 100.0 * a / (this.textfiles.length + this.imagefiles.length + this.shaderSrcFiles.length);
     }
 
-    constructor(private fluxions: Fluxions) {
+    get loaded(): boolean {
+        for (let t of this.textfiles) {
+            if (!t.loaded) return false;
+        }
+        for (let i of this.imagefiles) {
+            if (!i.loaded) return false;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (!s.loaded) return false;
+        }
+        return true;
+    }
+
+    get failed(): boolean {
+        for (let t of this.textfiles) {
+            if (t.failed) return true;
+        }
+        for (let i of this.imagefiles) {
+            if (i.failed) return true;
+        }
+        for (let s of this.shaderSrcFiles) {
+            if (s.failed) return true;
+        }
+        return this.false;
     }
 
     Load(url: string): void {
@@ -87,8 +115,34 @@ class Scenegraph {
     }
 
     private processTextFile(data: string, name: string, path: string, assetType: SGAssetType): void {
+        let tp = new TextParser(data);
+        if (assetType == SGAssetType.GeometryGroup) {
+            let icount = 10;
+            let vcount = 10;
+            for (let line of tp.lines) {
+                //console.log("TP: " + line);
+                if (line.length >= 4) {
+                    if (line[0] == "f" && icount >= 0) {
+                        icount--;
+                        let indices = TextParser.ParseFace(line);
+                        console.log(indices);
+                    }
+                    else if (line[0] == "v" && vcount >= 0) {
+                        vcount--;
+                        let vertex = TextParser.ParseVector(line);
+                        console.log(vertex);
+                    }
+                }
+                else if (line.length >= 2) {
+                    if (line[0] == "usemtl") {
+                        console.log("using mtl " + TextParser.ParseIdentifier(line));
+                    }
+                }
+            }
+            console.log("done!");
+        }
         // split into lines
-        let lines = data.split("\n");
+        let lines = data.split(/[\r\n]+/);
 
         for (let line of lines) {
             let splittokens = line.split(/\s+/);
@@ -120,7 +174,6 @@ class Scenegraph {
                     break;
                 // ".MTL"
                 case SGAssetType.MaterialLibrary:
-                    console.log("MTLLIB: " + line);
                     this.processMaterialLibraryTokens(tokens, path);
                     break;
             }
