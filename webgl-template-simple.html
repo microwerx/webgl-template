@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>WebGL Template (simple)</title>
+
+        <style>
+            body {
+                background: #dddddd;
+            }
+
+            .containerStyle {
+                background: cyan;
+                border-radius: 5px;
+                width: 640px;
+                height: 480px;
+            }
+        </style>
+    </head>
+
+    <h1>WebGL Template (simple)</h1>
+
+    <!-- This container will contain the WebGL canvas. -->
+    <div id="webglContainer" class="containerStyle">
+    </div>
+
+    <div id="console">
+        Debug info goes here.
+    </div>
+
+    <script src="webgl-template-simple.js"></script>
+    <script>
+        let app = new WebGLApp('webglContainer')
+        app.run()
+    </script>
+</html>
