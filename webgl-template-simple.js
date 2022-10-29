@@ -25,6 +25,95 @@
 // SOFTWARE.
 
 
+class PipelineState {
+    /**
+     *
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} vertexSource
+     * @param {string} fragmentSource
+     */
+    constructor(gl, vertexSource, fragmentSource) {
+        this.gl = gl
+
+        this.vertexShader = this.createShader(vertexSource, gl.VERTEX_SHADER)
+        if (!this.vertexShader) {
+            // return
+        }
+
+        this.fragmentShader = this.createShader(fragmentSource, gl.FRAGMENT_SHADER)
+        if (!this.fragmentShader) {
+            // return
+        }
+
+        this.program = this.createProgram(this.vertexShader, this.fragmentShader)
+    }
+
+    /**
+     *
+     * @param {string} source
+     * @param {number} type
+     * @returns {WebGLShader | null}
+     */
+    createShader(source, type) {
+        let gl = this.gl
+        let shader = gl.createShader(type)
+        gl.shaderSource(shader, source)
+        gl.compileShader(shader)
+
+        // Check for errors.
+        let status = gl.getShaderParameter(shader, gl.COMPILE_STATUS)
+        if (!status) {
+            // Print the info log.
+            let infoLog = gl.getShaderInfoLog(shader)
+            if (infoLog) {
+                let shaderType = ''
+                if (type == gl.VERTEX_SHADER)
+                    shaderType = "vertex shader"
+                else if (type == gl.FRAGMENT_SHADER)
+                    shaderType = "fragment shader"
+                console.log("Error compiling", shaderType, "InfoLog:")
+                console.log(infoLog)
+            }
+            return null
+        }
+
+        return shader
+    }
+
+    /**
+     *
+     * @param {WebGLShader} vshader
+     * @param {WebGLShader} fshader
+     * @returns {WebGLProgram | null}
+     */
+    createProgram(vshader, fshader) {
+        let gl = this.gl
+
+        let program = gl.createProgram()
+        if (vshader)
+            gl.attachShader(program, vshader)
+        if (fshader)
+            gl.attachShader(program, fshader)
+        gl.linkProgram(program)
+
+        // Check for errors.
+        let status = gl.getProgramParameter(program, gl.LINK_STATUS)
+        if (!status) {
+            // Print the info log.
+            let infoLog = gl.getProgramInfoLog(program)
+            if (infoLog) {
+                console.log("Failed to link program.")
+                console.log(infoLog)
+            }
+            return null
+        }
+
+        return program
+    }
+}
+
+
+
 // Create the Canvas element.
 class WebGLApp
 {
@@ -43,7 +132,7 @@ class WebGLApp
         this.canvas.style.borderRadius = 5
 
         // Create the WebGL context.
-        this.gl = this.canvas.getContext("webgl")
+        this.gl = this.canvas.getContext("webgl2")
         if (!this.gl) {
             console.log("WebGL context couldn't be made.")
             return
@@ -56,6 +145,19 @@ class WebGLApp
 
         // Get the debug console if available.
         this.console = document.getElementById('console')
+
+        this.setupGL()
+        this.loadObjects()
+    }
+
+    setupGL() {
+        let vshader = ''
+        let fshader = ''
+        this.pso = new PipelineState(this.gl, vshader, fshader)
+    }
+
+    loadObjects() {
+
     }
 
     setDebugMessage(str) {
@@ -74,6 +176,10 @@ class WebGLApp
         gl.clearColor(1.0, 0.0, 0.0, 1.0)
         gl.clearColor(Math.abs(Math.sin(this.currentTime)) * 1.0, 0.0, 0.0, 1.0);
         gl.clear(gl.CLEAR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+        // Set the pipeline state object.
+
+        // Draw the object.
     }
 
     mainloop() {
