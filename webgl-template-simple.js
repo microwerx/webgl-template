@@ -388,7 +388,7 @@ class WebGLApp
         this.parent.appendChild(this.canvas)
         this.canvas.width = this.parent.clientWidth
         this.canvas.height = (this.parent.clientWidth / 1.5) | 0;
-        this.canvas.style.borderRadius = 5
+        this.canvas.style.borderRadius = "5px"
 
         // Create the WebGL context.
         this.gl = this.canvas.getContext("webgl2")
