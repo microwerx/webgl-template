@@ -113,6 +113,188 @@ class PipelineState {
 }
 
 
+/**
+ * Stores a column vector in a Float32Array.
+ */
+class Vector4 {
+    /**
+     * Creates a member `v` that stores [x, y, z, w]
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @param {number} w
+     */
+    constructor(x, y, z, w) {
+        this.v = new Float32Array([x, y, z, w])
+    }
+}
+
+/**
+ * Stores a 4x4 matrix in column major order.
+ */
+class Matrix4 {
+    constructor(
+        m11, m12, m13, m14, // Row 1
+        m21, m22, m23, m24, // Row 2
+        m31, m32, m33, m34, // Row 3
+        m41, m42, m43, m44  // Row 4
+    ) {
+        this.m11 = m11; this.m12 = m12; this.m13 = m13; this.m14 = m14;
+        this.m21 = m21; this.m22 = m22; this.m23 = m23; this.m24 = m24;
+        this.m31 = m31; this.m32 = m32; this.m33 = m33; this.m34 = m34;
+        this.m41 = m41; this.m42 = m42; this.m43 = m43; this.m44 = m44;
+    }
+
+    /**
+     * Copies all the elements into a new matrix.
+     * @returns {Matrix4}
+     */
+    duplicate() {
+        return Matrix4(
+            this.m11, this.m12, this.m13, this.m14, // Row 1
+            this.m21, this.m22, this.m23, this.m24, // Row 2
+            this.m31, this.m32, this.m33, this.m34, // Row 3
+            this.m41, this.m42, this.m43, this.m44  // Row 4
+        )
+    }
+
+    /**
+     * Copies the elements from an `other` matrix into this one.
+     * @param {Matrix4} other
+     * @returns {Matrix4}
+     */
+    loadMatrix(other) {
+        this.m11 = other.m11; this.m12 = other.m12; this.m13 = other.m13; this.m14 = other.m14;
+        this.m21 = other.m21; this.m22 = other.m22; this.m23 = other.m23; this.m24 = other.m24;
+        this.m31 = other.m31; this.m32 = other.m32; this.m33 = other.m33; this.m34 = other.m34;
+        this.m41 = other.m41; this.m42 = other.m42; this.m43 = other.m43; this.m44 = other.m44;
+    }
+
+    /**
+     * Multiplies two matrices togethers.
+     * @param {Matrix4} m1
+     * @param {Matrix4} m2
+     * @returns {Matrix4}
+     */
+    multiply(m1, m2) {
+        return new Matrix4(
+            m1.m11 * m2.m11 + m1.m21 * m2.m12 + m1.m31 * m2.m13 + m1.m41 * m2.m14,
+            m1.m11 * m2.m21 + m1.m21 * m2.m22 + m1.m31 * m2.m23 + m1.m41 * m2.m24,
+            m1.m11 * m2.m31 + m1.m21 * m2.m32 + m1.m31 * m2.m33 + m1.m41 * m2.m34,
+            m1.m11 * m2.m41 + m1.m21 * m2.m42 + m1.m31 * m2.m43 + m1.m41 * m2.m44,
+            m1.m12 * m2.m11 + m1.m22 * m2.m12 + m1.m32 * m2.m13 + m1.m42 * m2.m14,
+            m1.m12 * m2.m21 + m1.m22 * m2.m22 + m1.m32 * m2.m23 + m1.m42 * m2.m24,
+            m1.m12 * m2.m31 + m1.m22 * m2.m32 + m1.m32 * m2.m33 + m1.m42 * m2.m34,
+            m1.m12 * m2.m41 + m1.m22 * m2.m42 + m1.m32 * m2.m43 + m1.m42 * m2.m44,
+            m1.m13 * m2.m11 + m1.m23 * m2.m12 + m1.m33 * m2.m13 + m1.m43 * m2.m14,
+            m1.m13 * m2.m21 + m1.m23 * m2.m22 + m1.m33 * m2.m23 + m1.m43 * m2.m24,
+            m1.m13 * m2.m31 + m1.m23 * m2.m32 + m1.m33 * m2.m33 + m1.m43 * m2.m34,
+            m1.m13 * m2.m41 + m1.m23 * m2.m42 + m1.m33 * m2.m43 + m1.m43 * m2.m44,
+            m1.m14 * m2.m11 + m1.m24 * m2.m12 + m1.m34 * m2.m13 + m1.m44 * m2.m14,
+            m1.m14 * m2.m21 + m1.m24 * m2.m22 + m1.m34 * m2.m23 + m1.m44 * m2.m24,
+            m1.m14 * m2.m31 + m1.m24 * m2.m32 + m1.m34 * m2.m33 + m1.m44 * m2.m34,
+            m1.m14 * m2.m41 + m1.m24 * m2.m42 + m1.m34 * m2.m43 + m1.m44 * m2.m44
+        );
+    }
+
+    /**
+     * Multiplies `other` by this matrix and returns `this`.
+     * @param {Matrix4} other
+     * @returns {Matrix4}
+     */
+    multMatrix(other) {
+        this.loadMatrix(this.multiply(this, other))
+        return this
+    }
+
+    asFloat32Array() {
+        return new Float32Array([
+            this.m11, this.m21, this.m31, this.m41, // Column 1
+            this.m12, this.m22, this.m32, this.m42, // Column 2
+            this.m13, this.m23, this.m33, this.m43, // Column 3
+            this.m14, this.m24, this.m34, this.m44, // Column 4
+        ])
+    }
+
+    loadIdentity() {
+        this.m11 = 1; this.m12 = 0; this.m13 = 0; this.m14 = 0;
+        this.m21 = 0; this.m22 = 1; this.m23 = 0; this.m24 = 0;
+        this.m31 = 0; this.m32 = 0; this.m33 = 1; this.m34 = 0;
+        this.m41 = 0; this.m42 = 0; this.m43 = 0; this.m44 = 1;
+        return this;
+    }
+
+    translate(x, y, z) {
+        let T = new Matrix4(
+            1, 0, 0, x,
+            0, 1, 0, y,
+            0, 0, 1, z,
+            0, 0, 0, 1)
+        return this.multMatrix(T)
+    }
+
+    scale(x, y, z) {
+        let S = new Matrix4(
+            x, 0, 0, 0,
+            0, y, 0, 0,
+            0, 0, z, 0,
+            0, 0, 0, 1
+        )
+        return this.multMatrix(S)
+    }
+
+    rotate(angleInDegrees, x, y, z) {
+        let theta = angleInDegrees * Math.PI / 180.0
+        let c = Math.cos(theta)
+        let s = Math.sin(theta)
+        let invLength = 1.0 / Math.sqrt(x * x + y * y + z * z)
+        x *= invLength
+        y *= invLength
+        z *= invLength
+
+        let R = new Matrix4(
+            x * x * (1 - c) + c, x * y * (1 - c) - z * s, x * z * (1 - c) + y * s, 0.0,
+            y * x * (1 - c) + z * s, y * y * (1 - c) + c, y * z * (1 - c) - x * s, 0.0,
+            x * z * (1 - c) - y * s, y * z * (1 - c) + x * s, z * z * (1 - c) + c, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        )
+        return this.multMatrix(R)
+    }
+
+    /**
+     *
+     * @param {number} fovy
+     * @param {number} aspect
+     * @param {number} near
+     * @param {number} far
+     * @returns
+     */
+    perspective(fovy, aspect, near, far) {
+        let f = 1.0 / Math.tan(Math.PI * fovy / 360.0);
+        let P = new Matrix4(
+            f / aspect, 0, 0, 0,
+            0, f, 0, 0,
+            0, 0, (far + near) / (near - far), 2 * far * near / (near - far),
+            0, 0, -1, 0
+        )
+        return this.multMatrix(P)
+    }
+}
+
+
+class Geometry {
+    /**
+     *
+     * @param {WebGL2RenderingContext} gl
+     */
+    constructor(gl) {
+        this.gl = gl
+    }
+
+
+}
+
+
 
 // Create the Canvas element.
 class WebGLApp
@@ -157,7 +339,7 @@ class WebGLApp
     }
 
     loadObjects() {
-
+        this.geometry = new Geometry(this.gl)
     }
 
     setDebugMessage(str) {
