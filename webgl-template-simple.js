@@ -24,6 +24,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+let vshader = `#version 300 es
+
+layout (location=0) in vec4 position;
+layout (location=1) in vec2 texcoord;
+
+out vec2 vTexcoord;
+
+void main() {
+    vTexcoord = texcoord;
+    gl_Position = position;
+}
+`;
+
+let fshader = `#version 300 es
+precision highp float;
+
+in vec2 vTexcoord;
+out vec4 fragColor;
+
+void main() {
+    fragColor = vec4(vTexcoord.xy, 1.0, 1.0);
+}
+`;
 
 class PipelineState {
     /**
@@ -110,8 +133,26 @@ class PipelineState {
 
         return program
     }
-}
 
+    use() {
+        this.gl.useProgram(this.program)
+    }
+
+    /**
+     *
+     * @param {string} uniformName
+     * @param {Matrix4} matrix
+     * @returns
+     */
+    setMatrix(uniformName, matrix) {
+        let gl = this.gl
+        let uloc = gl.getUniformLocation(this.program, uniformName)
+        if (!uloc) {
+            return
+        }
+        gl.uniformMatrix4fv(uloc, false, matrix.asFloat32Array(), 0, 0)
+    }
+}
 
 /**
  * Stores a column vector in a Float32Array.
@@ -134,10 +175,10 @@ class Vector4 {
  */
 class Matrix4 {
     constructor(
-        m11, m12, m13, m14, // Row 1
-        m21, m22, m23, m24, // Row 2
-        m31, m32, m33, m34, // Row 3
-        m41, m42, m43, m44  // Row 4
+        m11=1, m12=0, m13=0, m14=0, // Row 1
+        m21=0, m22=1, m23=0, m24=0, // Row 2
+        m31=0, m32=0, m33=1, m34=0, // Row 3
+        m41=0, m42=0, m43=0, m44=1  // Row 4
     ) {
         this.m11 = m11; this.m12 = m12; this.m13 = m13; this.m14 = m14;
         this.m21 = m21; this.m22 = m22; this.m23 = m23; this.m24 = m24;
@@ -281,20 +322,56 @@ class Matrix4 {
     }
 }
 
-
 class Geometry {
     /**
      *
      * @param {WebGL2RenderingContext} gl
      */
-    constructor(gl) {
+    constructor(gl, size) {
         this.gl = gl
+
+        this.positions = new Float32Array([
+            -size, -size, 0,
+             size, -size, 0,
+             0, size, 0
+        ])
+
+        this.texcoords = new Float32Array([
+            0.0, 0.0,
+            1.0, 0.0,
+            0.5, 1.0
+        ])
+
+        this.vertexArray = gl.createVertexArray()
+        gl.bindVertexArray(this.vertexArray)
+
+        // Create the buffer object to store the positions.
+        this.positionsBuffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionsBuffer)
+        gl.bufferData(gl.ARRAY_BUFFER, this.positions, gl.STATIC_DRAW)
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+        gl.enableVertexAttribArray(0)
+
+        // Create the buffer object to store the texture coordinates.
+        this.texcoordBuffer = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texcoordBuffer)
+        gl.bufferData(gl.ARRAY_BUFFER, this.texcoords, gl.STATIC_DRAW)
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
+        gl.enableVertexAttribArray(1)
     }
 
+    /**
+     *
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLProgram} program
+     */
+    drawPlane(gl, program) {
+        gl.bindVertexArray(this.vertexArray)
 
+        // Draw the triangle data.
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+    }
 }
-
-
 
 // Create the Canvas element.
 class WebGLApp
@@ -333,13 +410,11 @@ class WebGLApp
     }
 
     setupGL() {
-        let vshader = ''
-        let fshader = ''
         this.pso = new PipelineState(this.gl, vshader, fshader)
     }
 
     loadObjects() {
-        this.geometry = new Geometry(this.gl)
+        this.geometry = new Geometry(this.gl, 0.5)
     }
 
     setDebugMessage(str) {
@@ -350,18 +425,27 @@ class WebGLApp
     }
 
     update(dt) {
-
+        this.modelMatrix = new Matrix4()
+        this.modelMatrix.translate(0, 0, -2)
+        this.cameraMatrix = new Matrix4()
+        this.projectionMatrix = new Matrix4()
+        this.projectionMatrix.perspective(45.0, this.canvas.width/this.canvas.height, 0.1, 100.0)
     }
 
     draw(gl) {
         // Clear the screen.
         gl.clearColor(1.0, 0.0, 0.0, 1.0)
         gl.clearColor(Math.abs(Math.sin(this.currentTime)) * 1.0, 0.0, 0.0, 1.0);
-        gl.clear(gl.CLEAR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
         // Set the pipeline state object.
+        this.pso.use()
+        this.pso.setMatrix('WorldMatrix', this.modelMatrix)
+        this.pso.setMatrix('CameraMatrix', this.cameraMatrix)
+        this.pso.setMatrix('ProjectionMatrix', this.projectionMatrix)
 
         // Draw the object.
+        this.geometry.drawPlane(gl, this.pso.program)
     }
 
     mainloop() {
