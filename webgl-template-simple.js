@@ -29,11 +29,14 @@ let vshader = `#version 300 es
 layout (location=0) in vec4 position;
 layout (location=1) in vec2 texcoord;
 
+uniform mat4 ModelMatrix;
+uniform mat4 ProjectionViewMatrix;
+
 out vec2 vTexcoord;
 
 void main() {
     vTexcoord = texcoord;
-    gl_Position = position;
+    gl_Position = ProjectionViewMatrix * ModelMatrix * position;
 }
 `;
 
@@ -165,9 +168,94 @@ class Vector4 {
      * @param {number} z
      * @param {number} w
      */
-    constructor(x, y, z, w) {
+    constructor(x = 0, y = 0, z = 0, w = 1) {
         this.v = new Float32Array([x, y, z, w])
     }
+
+    /**
+     * Returns the vector sum a + b.
+     * @param {Vector4} a
+     * @param {Vector4} b
+     * @returns
+     */
+    static add(a, b) {
+        return new Vector4(a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3])
+    }
+
+    /**
+     * Returns the vector difference a - b.
+     * @param {Vector4} a
+     * @param {Vector4} b
+     * @returns
+     */
+    static sub(a, b) {
+        return new Vector4(a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3])
+    }
+
+    /**
+     * Calculates the dot product of a and b.
+     * @param {Vector4} a
+     * @param {Vector4} b
+     * @returns {number}
+     */
+    static dot(a, b) {
+        return a.v[0] * b.v[0] + a.v[1] * b.v[1] + a.v[2] * b.v[2]
+    }
+
+    /**
+     * Calculates the cross product of a and b.
+     * @param {Vector4} a
+     * @param {Vector4} b
+     * @returns {Vector4}
+     */
+    static cross(a, b) {
+        return new Vector4(
+            a.v[1] * b.v[2] - a.v[2] * b.v[1],
+            a.v[2] * b.v[0] - a.v[0] * b.v[2],
+            a.v[0] * b.v[1] - a.v[1] * b.v[0],
+            0)
+    }
+
+    /**
+     *
+     * @param {Vector4} origin
+     * @param {Vector4} target
+     * @returns {Vector4}
+     */
+    static directionFrom(origin, target) {
+        return Vector4.sub(target, origin).normalize()
+    }
+
+    /**
+     *
+     * @returns {Vector4}
+     */
+    normalizedCopy() {
+        let norm = this.norm()
+        return new Vector4(this.v[0] / norm, this.v[1] / norm, this.v[2] / norm, 0)
+    }
+
+    /**
+     *
+     * @returns {number} The length of the 3 component vector.
+     */
+    norm() {
+        return Math.sqrt(this.v[0] * this.v[0] + this.v[1] * this.v[1] + this.v[2] * this.v[2])
+    }
+
+    /**
+     *
+     * @returns {Vector4}
+     */
+    normalize() {
+        let norm = this.norm()
+        this.v[0] /= norm
+        this.v[1] /= norm
+        this.v[2] /= norm
+        return this
+    }
+
+
 }
 
 /**
@@ -304,21 +392,74 @@ class Matrix4 {
 
     /**
      *
+     * @param {number} l
+     * @param {number} r
+     * @param {number} t
+     * @param {number} b
+     * @param {number} n
+     * @param {number} f
+     * @returns
+     */
+    frustum(l, r, t, b, n, f) {
+        let P = new Matrix4(
+            (2*n)/(r-l), 0, (r+l)/(r-l), 0,
+            0, (2*n)/(t-b), (t+b)/(t-b), 0,
+            0, 0, -(f+n)/(f-n), (-2*f*n)/(f-n),
+            0, 0, -1, 0
+        );
+        return this.multMatrix(P);
+    }
+
+    /**
+     *
      * @param {number} fovy
      * @param {number} aspect
      * @param {number} near
      * @param {number} far
      * @returns
      */
-    perspective(fovy, aspect, near, far) {
-        let f = 1.0 / Math.tan(Math.PI * fovy / 360.0);
+    perspective(fovyDegrees, aspect, near, far) {
+        let fovyRadians = fovyDegrees * Math.PI / 180.0;
+        let f = 1.0 / Math.tan(fovyRadians / 2.0);
+        let z1 = far / (near - far);
+        let z2 = near * far / (near - far)
         let P = new Matrix4(
             f / aspect, 0, 0, 0,
             0, f, 0, 0,
-            0, 0, (far + near) / (near - far), 2 * far * near / (near - far),
+            0, 0, z1, z2,
             0, 0, -1, 0
         )
         return this.multMatrix(P)
+    }
+
+    /**
+     *
+     * @param {Vector4} origin
+     * @param {Vector4} target
+     * @param {Vector4} up
+     * @returns {Matrix4}
+     */
+    lookat(origin, target, up) {
+        let F = Vector4.directionFrom(origin, target)
+        let UP = up.normalizedCopy()
+        let S = Vector4.cross(F, UP)
+        let U = Vector4.cross(S, F)
+
+        let R = new Matrix4(
+             S.v[0],  S.v[1],  S.v[2], 0,
+             U.v[0],  U.v[1],  U.v[2], 0,
+            -F.v[0], -F.v[1], -F.v[2], 0,
+            0, 0, 0, 1
+        )
+        this.multMatrix(R)
+        let T = new Matrix4(
+            1, 0, 0, -origin.v[0],
+            0, 1, 0, -origin.v[1],
+            0, 0, 1, -origin.v[2],
+            0, 0, 0, 1
+        )
+        this.multMatrix(T)
+        return this
     }
 }
 
@@ -417,6 +558,11 @@ class WebGLApp
         this.geometry = new Geometry(this.gl, 0.5)
     }
 
+    /**
+     *
+     * @param {string} str
+     * @returns
+     */
     setDebugMessage(str) {
         if (!this.console)
             return
@@ -424,25 +570,48 @@ class WebGLApp
         this.console.innerHTML = str
     }
 
+    /**
+     *
+     * @param {number} dt
+     */
     update(dt) {
+        let angle = this.currentTime * 30;
         this.modelMatrix = new Matrix4()
-        this.modelMatrix.translate(0, 0, -2)
-        this.cameraMatrix = new Matrix4()
-        this.projectionMatrix = new Matrix4()
-        this.projectionMatrix.perspective(45.0, this.canvas.width/this.canvas.height, 0.1, 100.0)
+        this.modelMatrix.translate(0, 0, -5)
+        this.modelMatrix.rotate(1.1 * angle, 1, 0, 0)
+        this.modelMatrix.rotate(1.2 * angle, 0, 1, 0)
+        this.modelMatrix.rotate(1.4 * angle, 0, 0, 1)
+
+
+        let distance = 5 * Math.sin(30 * this.currentTime);
+        let origin = new Vector4(0, 0, 10 + distance)
+        let target = new Vector4(0, 0, 0)
+        let up = new Vector4(0, 1, 0, 0)
+        let aspect = this.canvas.width / this.canvas.height;
+        this.projectionViewMatrix = new Matrix4()
+        this.projectionViewMatrix.perspective(60.0, aspect, 0.1, 100.0)
+        //this.projectionViewMatrix.frustum(-1, 1, -1, 1, 0.1, 100.0)
+        this.projectionViewMatrix.lookat(origin, target, up)
     }
 
+    /**
+     *
+     * @param {WebGL2RenderingContext} gl
+     */
     draw(gl) {
         // Clear the screen.
         gl.clearColor(1.0, 0.0, 0.0, 1.0)
-        gl.clearColor(Math.abs(Math.sin(this.currentTime)) * 1.0, 0.0, 0.0, 1.0);
+        gl.clearColor(0.2 * (0.5 * Math.sin(this.currentTime) + 0.5), 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+        gl.enable(gl.DEPTH_TEST)
+        gl.depthFunc(gl.LESS)
+        //gl.enable(gl.CULL_FACE)
 
         // Set the pipeline state object.
         this.pso.use()
         this.pso.setMatrix('WorldMatrix', this.modelMatrix)
-        this.pso.setMatrix('CameraMatrix', this.cameraMatrix)
-        this.pso.setMatrix('ProjectionMatrix', this.projectionMatrix)
+        this.pso.setMatrix('ProjectionViewMatrix', this.projectionViewMatrix)
 
         // Draw the object.
         this.geometry.drawPlane(gl, this.pso.program)
