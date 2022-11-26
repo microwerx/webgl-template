@@ -26,6 +26,8 @@
 
 let vshader = `#version 300 es
 
+#pragma vscode_glsllint_stage : vert
+
 layout (location=0) in vec4 position;
 layout (location=1) in vec2 texcoord;
 
@@ -41,6 +43,9 @@ void main() {
 `;
 
 let fshader = `#version 300 es
+
+#pragma vscode_glsllint_stage : frag
+
 precision highp float;
 
 in vec2 vTexcoord;
@@ -254,8 +259,6 @@ class Vector4 {
         this.v[2] /= norm
         return this
     }
-
-
 }
 
 /**
@@ -301,28 +304,31 @@ class Matrix4 {
 
     /**
      * Multiplies two matrices togethers.
-     * @param {Matrix4} m1
-     * @param {Matrix4} m2
+     * @param {Matrix4} A
+     * @param {Matrix4} B
      * @returns {Matrix4}
      */
-    multiply(m1, m2) {
+    multiply(A, B) {
         return new Matrix4(
-            m1.m11 * m2.m11 + m1.m21 * m2.m12 + m1.m31 * m2.m13 + m1.m41 * m2.m14,
-            m1.m11 * m2.m21 + m1.m21 * m2.m22 + m1.m31 * m2.m23 + m1.m41 * m2.m24,
-            m1.m11 * m2.m31 + m1.m21 * m2.m32 + m1.m31 * m2.m33 + m1.m41 * m2.m34,
-            m1.m11 * m2.m41 + m1.m21 * m2.m42 + m1.m31 * m2.m43 + m1.m41 * m2.m44,
-            m1.m12 * m2.m11 + m1.m22 * m2.m12 + m1.m32 * m2.m13 + m1.m42 * m2.m14,
-            m1.m12 * m2.m21 + m1.m22 * m2.m22 + m1.m32 * m2.m23 + m1.m42 * m2.m24,
-            m1.m12 * m2.m31 + m1.m22 * m2.m32 + m1.m32 * m2.m33 + m1.m42 * m2.m34,
-            m1.m12 * m2.m41 + m1.m22 * m2.m42 + m1.m32 * m2.m43 + m1.m42 * m2.m44,
-            m1.m13 * m2.m11 + m1.m23 * m2.m12 + m1.m33 * m2.m13 + m1.m43 * m2.m14,
-            m1.m13 * m2.m21 + m1.m23 * m2.m22 + m1.m33 * m2.m23 + m1.m43 * m2.m24,
-            m1.m13 * m2.m31 + m1.m23 * m2.m32 + m1.m33 * m2.m33 + m1.m43 * m2.m34,
-            m1.m13 * m2.m41 + m1.m23 * m2.m42 + m1.m33 * m2.m43 + m1.m43 * m2.m44,
-            m1.m14 * m2.m11 + m1.m24 * m2.m12 + m1.m34 * m2.m13 + m1.m44 * m2.m14,
-            m1.m14 * m2.m21 + m1.m24 * m2.m22 + m1.m34 * m2.m23 + m1.m44 * m2.m24,
-            m1.m14 * m2.m31 + m1.m24 * m2.m32 + m1.m34 * m2.m33 + m1.m44 * m2.m34,
-            m1.m14 * m2.m41 + m1.m24 * m2.m42 + m1.m34 * m2.m43 + m1.m44 * m2.m44
+            A.m11 * B.m11 + A.m21 * B.m12 + A.m31 * B.m13 + A.m41 * B.m14, // 11
+            A.m12 * B.m11 + A.m22 * B.m12 + A.m32 * B.m13 + A.m42 * B.m14, // 12
+            A.m13 * B.m11 + A.m23 * B.m12 + A.m33 * B.m13 + A.m43 * B.m14, // 13
+            A.m14 * B.m11 + A.m24 * B.m12 + A.m34 * B.m13 + A.m44 * B.m14, // 14
+
+            A.m11 * B.m21 + A.m21 * B.m22 + A.m31 * B.m23 + A.m41 * B.m24, // 21
+            A.m12 * B.m21 + A.m22 * B.m22 + A.m32 * B.m23 + A.m42 * B.m24, // 22
+            A.m13 * B.m21 + A.m23 * B.m22 + A.m33 * B.m23 + A.m43 * B.m24, // 23
+            A.m14 * B.m21 + A.m24 * B.m22 + A.m34 * B.m23 + A.m44 * B.m24, // 24
+
+            A.m11 * B.m31 + A.m21 * B.m32 + A.m31 * B.m33 + A.m41 * B.m34, // 31
+            A.m12 * B.m31 + A.m22 * B.m32 + A.m32 * B.m33 + A.m42 * B.m34, // 32
+            A.m13 * B.m31 + A.m23 * B.m32 + A.m33 * B.m33 + A.m43 * B.m34, // 33
+            A.m14 * B.m31 + A.m24 * B.m32 + A.m34 * B.m33 + A.m44 * B.m34, // 34
+
+            A.m11 * B.m41 + A.m21 * B.m42 + A.m31 * B.m43 + A.m41 * B.m44, // 41
+            A.m12 * B.m41 + A.m22 * B.m42 + A.m32 * B.m43 + A.m42 * B.m44, // 42
+            A.m13 * B.m41 + A.m23 * B.m42 + A.m33 * B.m43 + A.m43 * B.m44, // 43
+            A.m14 * B.m41 + A.m24 * B.m42 + A.m34 * B.m43 + A.m44 * B.m44  // 44
         );
     }
 
@@ -419,10 +425,10 @@ class Matrix4 {
      * @returns
      */
     perspective(fovyDegrees, aspect, near, far) {
-        let fovyRadians = fovyDegrees * Math.PI / 180.0;
-        let f = 1.0 / Math.tan(fovyRadians / 2.0);
-        let z1 = far / (near - far);
-        let z2 = near * far / (near - far)
+        let fovyRadians = fovyDegrees * Math.PI / 180.0
+        let f = 1.0 / Math.tan(fovyRadians / 2.0)
+        let z1 = (near + far) / (near - far)
+        let z2 = 2 * near * far / (near - far)
         let P = new Matrix4(
             f / aspect, 0, 0, 0,
             0, f, 0, 0,
@@ -460,6 +466,21 @@ class Matrix4 {
         )
         this.multMatrix(T)
         return this
+    }
+
+    /**
+     * @returns {string}
+     */
+    asText() {
+        let s = "";
+        s += "<table>\n"
+        s += "<tr><th>row</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>\n"
+        s += "<tr><td>1</td><td>" + this.m11.toPrecision(4) + "</td><td>" + this.m12.toPrecision(4) + "</td><td>" + this.m13.toPrecision(4) + "</td><td>" + this.m14.toPrecision(4) + "</td></tr>\n"
+        s += "<tr><td>2</td><td>" + this.m21.toPrecision(4) + "</td><td>" + this.m22.toPrecision(4) + "</td><td>" + this.m23.toPrecision(4) + "</td><td>" + this.m24.toPrecision(4) + "</td></tr>\n"
+        s += "<tr><td>3</td><td>" + this.m31.toPrecision(4) + "</td><td>" + this.m32.toPrecision(4) + "</td><td>" + this.m33.toPrecision(4) + "</td><td>" + this.m34.toPrecision(4) + "</td></tr>\n"
+        s += "<tr><td>4</td><td>" + this.m41.toPrecision(4) + "</td><td>" + this.m42.toPrecision(4) + "</td><td>" + this.m43.toPrecision(4) + "</td><td>" + this.m44.toPrecision(4) + "</td></tr>\n"
+        s += "</table>"
+        return s
     }
 }
 
@@ -577,21 +598,18 @@ class WebGLApp
     update(dt) {
         let angle = this.currentTime * 30;
         this.modelMatrix = new Matrix4()
-        this.modelMatrix.translate(0, 0, -5)
         this.modelMatrix.rotate(1.1 * angle, 1, 0, 0)
         this.modelMatrix.rotate(1.2 * angle, 0, 1, 0)
         this.modelMatrix.rotate(1.4 * angle, 0, 0, 1)
 
-
-        let distance = 5 * Math.sin(30 * this.currentTime);
-        let origin = new Vector4(0, 0, 10 + distance)
+        let distance = 3 * Math.sin(this.currentTime / 10);
+        let origin = new Vector4(0, 0, 5 + distance)
         let target = new Vector4(0, 0, 0)
         let up = new Vector4(0, 1, 0, 0)
-        let aspect = this.canvas.width / this.canvas.height;
+        let aspect = this.canvas.clientWidth / this.canvas.clientHeight;
         this.projectionViewMatrix = new Matrix4()
-        this.projectionViewMatrix.perspective(60.0, aspect, 0.1, 100.0)
-        //this.projectionViewMatrix.frustum(-1, 1, -1, 1, 0.1, 100.0)
         this.projectionViewMatrix.lookat(origin, target, up)
+        this.projectionViewMatrix.perspective(60.0, aspect, 0.1, 100.0)
     }
 
     /**
@@ -601,16 +619,16 @@ class WebGLApp
     draw(gl) {
         // Clear the screen.
         gl.clearColor(1.0, 0.0, 0.0, 1.0)
-        gl.clearColor(0.2 * (0.5 * Math.sin(this.currentTime) + 0.5), 0.0, 0.0, 1.0);
+        gl.clearColor((0.5 * Math.sin(this.currentTime) + 0.5), 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
         gl.enable(gl.DEPTH_TEST)
         gl.depthFunc(gl.LESS)
-        //gl.enable(gl.CULL_FACE)
+        gl.enable(gl.CULL_FACE)
 
         // Set the pipeline state object.
         this.pso.use()
-        this.pso.setMatrix('WorldMatrix', this.modelMatrix)
+        this.pso.setMatrix('ModelMatrix', this.modelMatrix)
         this.pso.setMatrix('ProjectionViewMatrix', this.projectionViewMatrix)
 
         // Draw the object.
@@ -630,6 +648,7 @@ class WebGLApp
             if (this.gl)
                 self.draw(this.gl)
             this.setDebugMessage(this.frameNum.toString())
+            this.setDebugMessage(this.projectionViewMatrix.asText())
 
             // Call the mainloop again.
             self.mainloop()
