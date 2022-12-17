@@ -48,11 +48,15 @@ let fshader = `#version 300 es
 
 precision highp float;
 
+uniform sampler2D DiffuseTexture;
+
 in vec2 vTexcoord;
 out vec4 fragColor;
 
 void main() {
-    fragColor = vec4(vTexcoord.xy, 1.0, 1.0);
+    vec4 color = texture(DiffuseTexture, vTexcoord.xy);
+
+    fragColor = vec4(color.rgb, 1.0);
 }
 `;
 
@@ -159,6 +163,21 @@ class PipelineState {
             return
         }
         gl.uniformMatrix4fv(uloc, false, matrix.asFloat32Array(), 0, 0)
+    }
+
+    /**
+     * 
+     * @param {string} uniformName 
+     * @param {number} value 
+     * @returns 
+     */
+    setInteger(uniformName, value) {
+        let gl = this.gl
+        let uloc = gl.getUniformLocation(this.program, uniformName)
+        if (!uloc) {
+            return
+        }
+        gl.uniform1i(uloc, value)
     }
 }
 
@@ -572,7 +591,28 @@ class WebGLApp
     }
 
     setupGL() {
-        this.pso = new PipelineState(this.gl, vshader, fshader)
+        let gl = this.gl
+        this.pso = new PipelineState(gl, vshader, fshader)
+
+        // Create two textures to use for rendering.
+
+        /**
+         * @type{HTMLImageElement}
+         */
+        let crystallizedImage = document.getElementById("tex2d-crystallized")
+        this.crystallizedTexture = gl.createTexture()
+        gl.bindTexture(gl.TEXTURE_2D, this.crystallizedTexture)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, crystallizedImage)
+        gl.generateMipmap(gl.TEXTURE_2D)
+
+        /**
+         * @type(HTMLImageElement)
+         */
+        let cloudsImage = document.getElementById("tex2d-clouds")
+        this.cloudsTexture = gl.createTexture()
+        gl.bindTexture(gl.TEXTURE_2D, this.cloudsTexture)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cloudsImage)
+        gl.generateMipmap(gl.TEXTURE_2D)
     }
 
     loadObjects() {
@@ -617,6 +657,11 @@ class WebGLApp
      * @param {WebGL2RenderingContext} gl
      */
     draw(gl) {
+        // Create an index that allows us to flip the texture once a second.
+        // OR zero to the time to convert it to an integer and use modulus to
+        // limit it to 0 or 1.
+        let index = (this.currentTime | 0) % 2;
+
         // Clear the screen.
         gl.clearColor(1.0, 0.0, 0.0, 1.0)
         gl.clearColor((0.5 * Math.sin(this.currentTime) + 0.5), 0.0, 0.0, 1.0);
@@ -624,12 +669,19 @@ class WebGLApp
 
         gl.enable(gl.DEPTH_TEST)
         gl.depthFunc(gl.LESS)
-        gl.enable(gl.CULL_FACE)
+        // gl.enable(gl.CULL_FACE)
 
         // Set the pipeline state object.
         this.pso.use()
         this.pso.setMatrix('ModelMatrix', this.modelMatrix)
         this.pso.setMatrix('ProjectionViewMatrix', this.projectionViewMatrix)
+
+        gl.activeTexture(gl.TEXTURE1)
+        if (index == 0)
+            gl.bindTexture(gl.TEXTURE_2D, this.crystallizedTexture)
+        else if (index == 1)
+            gl.bindTexture(gl.TEXTURE_2D, this.cloudsTexture)
+        this.pso.setInteger('DiffuseTexture', 1)
 
         // Draw the object.
         this.geometry.drawPlane(gl, this.pso.program)
